@@ -1,7 +1,11 @@
-from DB import createDB
+from DB import DB
+
 
 def __main__():
-    createDB.create_db()
+
+    piDB = DB.PiDB()
+    piDB.create_db()
+    piDB.insert_light(0.01, "sensor_light")
 
 
 __main__()
