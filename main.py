@@ -1,11 +1,9 @@
-from DB import DB
+
+from iPlant import iPlant_program
 
 
 def __main__():
-
-    piDB = DB.PiDB()
-    piDB.create_db()
-    piDB.insert_light(0.01, "sensor_light")
+    iPlant_program.star_program()
 
 
 __main__()

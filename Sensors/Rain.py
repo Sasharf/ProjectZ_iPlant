@@ -1,6 +1,6 @@
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 from random import randint
-GPIO.setmode(GPIO.BCM)
+#GPIO.setmode(GPIO.BCM)
 
 
 class Rain:

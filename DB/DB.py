@@ -1,24 +1,23 @@
 import sqlite3
 import sys
 import os.path as path
-import DB.Profile
+import iPlant.profile
 import time
 
 
 class PiDB:
-    conn = sqlite3.connect('piDB')
-    c = conn.cursor()
+    conn = None
+    c = None
 
     def __init__(self):
         if not path.exists('piDB'):
-            self.create_db(self)
+            print('iPlant DB exists? --> Doesnt exist')
+            self.create_db()
+        else:
+            print('iPlant DB exists? --> Exist')
 
         self.conn = sqlite3.connect('piDB')
         self.c = self.conn.cursor()
-
-    def __del__(self):
-        self.c.close()
-        self.conn.close()
 
     # ............................LIGHT...............................................................
     # ................................................................................................
@@ -177,36 +176,38 @@ class PiDB:
 
     def create_db(self):
 
-        print("----------------------BGN DB---------------------------------")
+        print("----------Begin DB creation-------------")
         try:
+            self.conn = sqlite3.connect('piDB')
+            self.c = self.conn.cursor()
 
             self.c.execute("""CREATE TABLE sensor_light(
-                                prob_date text as primary key,
+                                prob_date text primary key,
                                 prob_val integer
                          )""")
 
             self.c.execute("""CREATE TABLE sensor_heat(
-                                prob_date text as primary key,
+                                prob_date text primary key,
                                 prob_val integer
                             )""")
 
             self.c.execute("""CREATE TABLE sensor_moist(
-                                prob_date text as primary key,
+                                prob_date text primary key,
                                 prob_val integer
                             )""")
 
             self.c.execute("""CREATE TABLE sensor_rain(
-                                prob_date text as primary key,
+                                prob_date text primary key,
                                 prob_val integer
                             )""")
 
             self.c.execute("""CREATE TABLE sensor_water_lvl(
-                                prob_date text as primary key,
+                                prob_date text primary key,
                                 prob_val integer
                             )""")
 
             self.c.execute("""CREATE TABLE profiles(
-                                name text as primary key,
+                                name text primary key,
                                 light INTEGER,
                                 heat INTEGER,
                                 moist INTEGER,
@@ -218,12 +219,14 @@ class PiDB:
             # the next table will remember the last time it used the pump.
             # ----------------
             self.c.execute("""CREATE TABLE water(
-                          wateredTime text as primary key
+                          wateredTime text primary key
                          )""")
 
             self.conn.commit()
+            self.c.close()
             self.conn.close()
+            print('Creation completed successfully without errors!')
         except sqlite3.OperationalError as err:
-            print(err)
+            print("Error occurred while creating DB: ", err)
 
-        print("----------------------END DB---------------------------------")
+        print("----------End DB creation---------------")

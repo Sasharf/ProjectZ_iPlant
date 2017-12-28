@@ -1,9 +1,9 @@
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 from random import randint
-GPIO.setmode(GPIO.BCM)
+#GPIO.setmode(GPIO.BCM)
 
 
-class Heat:
+class Light:
     pin_num = None
 
     def __init__(self, pin):
