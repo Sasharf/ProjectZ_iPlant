@@ -1,15 +1,30 @@
 
 from . import iPlant_sys
-from DB.DB import PiDB
 import time
+import sys
+
 
 def star_program():
-    print("")
-    print("-------------------iPlant program STARTED!--------------------------------")
+    program_starter()
 
-    piDB = PiDB()
     iplant = iPlant_sys.IPlantSys()
+    run_choice = print_choices()
 
+    run_time = 0
+    print("-------------------Main loop started:------------------------------------ ")
+    while run_time != int(run_choice):
+        print("-------------------", run_time)
+
+        iplant.get_cmd_to_do()
+        check_if_whole_hour(iplant)
+        run_time += 1
+
+        time.sleep(5)
+
+    program_ended()
+
+
+def print_choices():
     choice = -1
     while choice != "1" and choice != "2":
         print("Commands:")
@@ -19,20 +34,24 @@ def star_program():
         choice = input('Please enter command number:')
 
     if choice == "1":
-        choice = input('Please enter how much time you would like the program to run(-1 for inf, 0 for exit): ')
-    if choice == "2" or choice == "0":
+        run_choice = input('Please enter how much time you would like the program to run(-1 for inf, 0 for exit): ')
+    if choice == "2" or run_choice == "0":
         program_ended()
-        return
+        sys.exit()
 
-    run_time = 0
-    print("-------------------Main loop started:------------------------------------ ")
-    while run_time != int(choice):
-        print("-------------------", run_time)
-        iplant.get_cmd_to_do()
-        run_time += 1
-        time.sleep(5)
+    return run_choice
 
-    program_ended()
+
+def check_if_whole_hour(iplant):
+    timestamp = time.time()
+    if timestamp % 3600 == 0:
+        print("sending sensors status to server")
+        iplant.send_sensors_status()
+
+
+def program_starter():
+    print("")
+    print("-------------------iPlant program STARTED!--------------------------------")
 
 
 def program_ended():

@@ -1,5 +1,5 @@
 import requests, json
-from Sensors import Heat, Light, Moist, Rain, WaterLvl
+from Hardware import Heat, Light, Moist, Rain, WaterLvl
 from . import utility
 import time
 
@@ -26,7 +26,7 @@ class IPlantSys:
                 continue
             sensor = {
                 'name': attr,
-                'value': value.get_status()
+                'value': value.get_status(),
             }
             arr_sensors.append(sensor)
 
@@ -37,9 +37,12 @@ class IPlantSys:
         params = {
             "pi_mac": utility.get_mac(),
         }
-
-        resp = requests.get('http://127.0.0.1:8000/get_commands', params=params)
-        answer = resp.json()
+        try:
+            resp = requests.get('http://127.0.0.1:8000/get_commands', params=params)
+            answer = resp.json()
+        except Exception as err:
+            print("Cant reach server")
+            return False
 
         if answer['success']:
             print("There are commands to execute!")
@@ -62,11 +65,15 @@ class IPlantSys:
     def send_sensors_status(self):
         data = {
             "pi_mac": utility.get_mac(),
-            "arr_sensors": self.get_sensors_status()
+            'arr_sensor': self.get_sensors_status()
         }
-        resp = requests.get('http://127.0.0.1:8000/receive_and_save_sensors', params=data)
-        answer = resp.json()
 
-        print(answer['success'])
+        try:
+            resp = requests.post('http://127.0.0.1:8000/receive_and_save_sensors/', json=data)
+            answer = resp.json()
+
+            print("Server got answer? --> ", answer['success'])
+        except Exception as err:
+            print("Cant reach server")
 
         return True
