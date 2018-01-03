@@ -1,5 +1,5 @@
 
-
+# Finished
 def get_mac(interface='eth0'):
     # Return the MAC address of the specified interface
     try:

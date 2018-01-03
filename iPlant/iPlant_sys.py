@@ -1,5 +1,5 @@
 import requests, json
-from Hardware import Heat, Light, Moist, Rain, WaterLvl
+from Hardware import Heat, Light, Moist, Rain, WaterLvl, Pump
 from . import utility
 import time
 
@@ -14,10 +14,13 @@ class IPlantSys:
         self.moist = Moist.Moist(3)
         self.rain = Rain.Rain(4)
         self.water_lvl = WaterLvl.WaterLvl(5)
+        self.pump = Pump.Pump(6)
 
+    # Finished
     def set_profile(self, profile):
         self.profile = profile
 
+    # Finished
     def get_sensors_status(self):
         arr_sensors = []
         for attr, value in self.__dict__.items():
@@ -32,6 +35,7 @@ class IPlantSys:
 
         return arr_sensors
 
+    # Finished
     def get_cmd_to_do(self):
         print("Getting commands to do from server:")
         params = {
@@ -42,7 +46,7 @@ class IPlantSys:
             answer = resp.json()
         except Exception as err:
             print("Cant reach server")
-            return False
+            return
 
         if answer['success']:
             print("There are commands to execute!")
@@ -51,8 +55,8 @@ class IPlantSys:
 
         else:
             print("No commands to execute!")
-        return True
 
+    # TODO: Not finished - depends on what commands we will have
     def do_commands(self, arg_commands):
 
         for cmd in arg_commands:
@@ -62,6 +66,7 @@ class IPlantSys:
 
         return True
 
+    # Finished - just change url to new server
     def send_sensors_status(self):
         data = {
             "pi_mac": utility.get_mac(),
@@ -77,3 +82,19 @@ class IPlantSys:
             print("Cant reach server")
 
         return True
+
+    # TODO: Started - need to finish
+    def water_now(self):
+        water_lvl = self.water_lvl.get_water_lvl()
+        somenumber = 123
+
+        if water_lvl > somenumber:
+            print("Watering in progress!")
+            self.pump.pump_now()
+            return True
+        else:
+            return False
+
+    # TODO: Not started - need to do
+    def check_if_need_water(self):
+        return False

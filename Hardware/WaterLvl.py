@@ -11,3 +11,6 @@ class WaterLvl:
 
     def get_status(self):
         return randint(0, 1000)
+
+    def get_water_lvl(selfs):
+        return randint(0, 1000)
