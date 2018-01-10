@@ -1,2 +1,8 @@
 .idea
+
+#virtual ENV
+.venv
+venv/
+ENV/
+
 piDB
