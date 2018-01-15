@@ -40,7 +40,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="$(if [ "$OSTYPE" "==" "cygwin" ]; then cygpath -u 'C:\Users\OMEN\PycharmProjects\IPlant\venv'; else echo '/C/Users/OMEN/PycharmProjects/IPlant/venv'; fi;)"
+VIRTUAL_ENV="$(if [ "$OSTYPE" "==" "cygwin" ]; then cygpath -u 'C:\Users\USER\PycharmProjects\ProjectZ_iPlantLogic\venv'; else echo '/C/Users/USER/PycharmProjects/ProjectZ_iPlantLogic/venv'; fi;)"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
