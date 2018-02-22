@@ -1,7 +1,5 @@
-#import RPi.GPIO as GPIO
 from random import randint
 import Adafruit_ADS1x15
-#GPIO.setmode(GPIO.BCM)
 
 
 class Light:
@@ -18,10 +16,10 @@ class Light:
         try:
             return self.adc.read_adc(self.pin_num, gain=1)
         except Exception as err:
-            return randint(0, 1000)
+            return randint(0, 100)
 
     def get_status(self):
-        return randint(0, 1000)
+        return randint(0, 100)
 
 # ToDO:
 # write on each sensor the range of the signal given.

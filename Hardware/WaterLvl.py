@@ -1,7 +1,6 @@
-#import RPi.GPIO as GPIO
 from random import randint
 import Adafruit_ADS1x15
-#GPIO.setmode(GPIO.BCM)
+
 
 
 class WaterLvl:
@@ -15,13 +14,13 @@ class WaterLvl:
         self.pin_num = pin
 
     def get_status(self):
-        return randint(0, 1000)
+        return randint(0, 100)
 
     def get_real_water_lvl(self):
         try:
             return self.adc.read_adc(self.pin_num, gain=1)
         except Exception as err:
-            return randint(0, 1000)
+            return randint(0, 100)
 
     def get_water_lvl(selfs):
-        return randint(0, 1000)
+        return randint(0, 100)

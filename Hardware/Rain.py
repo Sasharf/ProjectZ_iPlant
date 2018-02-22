@@ -11,3 +11,6 @@ class Rain:
 
     def get_status(self):
         return randint(0, 1000)
+
+
+# TODO: Create get_real_status function

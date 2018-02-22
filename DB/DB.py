@@ -1,6 +1,6 @@
 import sqlite3
 import sys
-import os.path as path
+import os as os
 import iPlant.profile
 import time
 
@@ -10,7 +10,7 @@ class PiDB:
     c = None
 
     def __init__(self):
-        if not path.exists('piDB'):
+        if not os.path.exists('piDB'):
             print('iPlant DB exists? --> Doesnt exist')
             self.create_db()
         else:
@@ -19,112 +19,33 @@ class PiDB:
         self.conn = sqlite3.connect('piDB')
         self.c = self.conn.cursor()
 
-    # ............................LIGHT...............................................................
+    def __del__(self):
+        self.c.close()
+        self.conn.close()
+
+    # ............................SENSORS...............................................................
     # ................................................................................................
 
-    def insert_light(self, arg_val):
-        with self.conn:
-            self.c.execute("INSERT INTO sensor_light values (:prob_date,:prob_val)",
-                           {'prob_date': time.time(), 'prob_val': arg_val})
+    def insert_sensors_log(self, data):
+        light = data['light']
+        heat = data['heat']
+        moist = data['moist']
+        water_lvl = data['water_lvl']
 
-    def get_last_prob_light(self):
+        with self.conn:
+            self.c.execute("INSERT INTO sensors_log values (:prob_date,:light,:heat,:moist,:water_lvl)",
+                           {'prob_date': time.time(), 'light': light, 'heat': heat, 'moist': moist, 'water_lvl': water_lvl})
+
+    def get_last_sensors_log(self):
         self.c.execute("""SELECT * 
-                          FROM sensor_light 
-                          WHERE prob_date = (SELECT MAX(prob_date) FROM sensor_light)
+                          FROM sensors_log 
+                          WHERE prob_date = (SELECT MAX(prob_date) FROM sensors_log)
                       """)
         return self.c.fetchone()
 
-    def get_many_prob_light(self, arg):
+    def get_many_sensors_logs(self, arg):
         self.c.execute("""SELECT * 
-                          FROM sensor_light 
-                          ORDER BY prob_date desc
-                      """)
-        return self.c.fetchmany(arg)
-
-    # ............................HEAT................................................................
-    # ................................................................................................
-
-    def insert_heat(self, arg_val):
-        with self.conn:
-            self.c.execute("INSERT INTO sensor_heat values (:prob_date,:prob_val)",
-                           {'prob_date': time.time(), 'prob_val': arg_val})
-
-    def get_last_prob_heat(self):
-        self.c.execute("""SELECT * 
-                          FROM sensor_heat 
-                          WHERE prob_date = (SELECT MAX(prob_date) FROM sensor_heat)
-                      """)
-        return self.c.fetchone()
-
-    def get_many_prob_heat(self, arg):
-        self.c.execute("""SELECT * 
-                          FROM sensor_heat 
-                          ORDER BY prob_date desc
-                      """)
-        return self.c.fetchmany(arg)
-
-    # ............................MOIST...............................................................
-    # ................................................................................................
-
-    def insert_moist(self, arg_val):
-        with self.conn:
-            self.c.execute("INSERT INTO sensor_moist values (:prob_date,:prob_val)",
-                           {'prob_date': time.time(), 'prob_val': arg_val})
-
-    def get_last_prob_moist(self):
-        self.c.execute("""SELECT * 
-                          FROM sensor_moist 
-                          WHERE prob_date = (SELECT MAX(prob_date) FROM sensor_moist)
-                      """)
-        return self.c.fetchone()
-
-    def get_many_prob_moist(self, arg):
-        self.c.execute("""SELECT * 
-                          FROM sensor_moist 
-                          ORDER BY prob_date desc
-                      """)
-        return self.c.fetchmany(arg)
-
-    # ............................RAIN................................................................
-    # ................................................................................................
-
-    def insert_rain(self, arg_val):
-        with self.conn:
-            self.c.execute("INSERT INTO sensor_rain values (:prob_date,:prob_val)",
-                           {'prob_date': time.time(), 'prob_val': arg_val})
-
-    def get_last_prob_rain(self):
-        self.c.execute("""SELECT * 
-                          FROM sensor_rain 
-                          WHERE prob_date = (SELECT MAX(prob_date) FROM sensor_rain)
-                      """)
-        return self.c.fetchone()
-
-    def get_many_prob_rain(self, arg):
-        self.c.execute("""SELECT * 
-                          FROM sensor_rain
-                          ORDER BY prob_date desc
-                      """)
-        return self.c.fetchmany(arg)
-
-    # ............................WATER_LVL...........................................................
-    # ................................................................................................
-
-    def insert_water_lvl(self, arg_val):
-        with self.conn:
-            self.c.execute("INSERT INTO sensor_water_lvl values (:prob_date,:prob_val)",
-                           {'prob_date': time.time(), 'prob_val': arg_val})
-
-    def get_last_prob_water_lvl(self):
-        self.c.execute("""SELECT * 
-                          FROM sensor_water_lvl
-                          WHERE prob_date = (SELECT MAX(prob_date) FROM sensor_water_lvl)
-                      """)
-        return self.c.fetchone()
-
-    def get_many_prob_water_lvl(self, arg):
-        self.c.execute("""SELECT * 
-                          FROM sensor_water_lvl 
+                          FROM sensors_log 
                           ORDER BY prob_date desc
                       """)
         return self.c.fetchmany(arg)
@@ -132,31 +53,46 @@ class PiDB:
     # ..............................PROFILE...........................................................
     # ................................................................................................
 
-    def insert_profile(self, arg_profile):
+    def set_profile(self, arg_profile):
         with self.conn:
-            self.c.execute("INSERT INTO profiles values (:name,:light,:heat,:moist,:rain,:outside,:last_changed)",
-                           {'name': arg_profile.name,
-                            'light': arg_profile.light,
-                            'heat': arg_profile.heat,
-                            'moist': arg_profile.moist,
-                            'outside': arg_profile.outside,
-                            'last_changed': arg_profile.last_changed,
+            self.c.execute("INSERT INTO profile values (:name,:light,:heatMin,:heatMax,:moistMin,:moistMax,:location)",
+                           {'name': 'profile',
+                            'light': arg_profile['light'],
+                            'heatMin': arg_profile['heatMin'],
+                            'heatMax': arg_profile['heatMax'],
+                            'moistMin': arg_profile['moistMin'],
+                            'moistMax': arg_profile['moistMax'],
+                            'location': arg_profile['location']
                             })
 
-    def get_last_profile(self): # get last modified profile
+    def get_profile(self):
         self.c.execute("""SELECT * 
-                          FROM profiles
-                          WHERE last_changed = (SELECT MAX(last_changed) FROM profiles)
+                          FROM profile
                       """)
         return self.c.fetchone()
 
-    # ..............................WATER............................................................
+    def update_profile(self, arg_profile):
+        with self.conn:
+            arg_light = arg_profile['light']
+            arg_heatMin = arg_profile['heatMin']
+            arg_heatMax = arg_profile['heatMax']
+            arg_moistMin = arg_profile['moistMin']
+            arg_moistMax = arg_profile['moistMax']
+            arg_location = arg_profile['location']
+
+            self.c.execute("""UPDATE profile
+                              SET light = ?, heatMin = ?, heatMax = ?,
+                                  moistMin = ?, moistMax = ?, location = ?
+                              WHERE name='profile';
+                          """, (arg_light, arg_heatMin, arg_heatMax, arg_moistMin, arg_moistMax, arg_location))
+
+    # ..............................WATERING............................................................
     # ................................................................................................
 
     def insert_water(self, arg_val):
         with self.conn:
-            self.c.execute("INSERT INTO water values (:wateredTime)",
-                           {'wateredTime': arg_val})
+            self.c.execute("INSERT INTO water values (:wateredTime,:amount)",
+                           {'wateredTime': time.time(), 'amount': arg_val})
 
     def get_last_waterTime(self):
         self.c.execute("""SELECT * 
@@ -172,6 +108,46 @@ class PiDB:
                       """)
         return self.c.fetchmany(arg)
 
+    # ..............................CONFIG............................................................
+    # ................................................................................................
+
+    def set_config(self, arg_config):
+        with self.conn:
+            self.c.execute("INSERT INTO pi_config values (:name,:light,:heat,:moist,:rain,:pump,:water_lvl,:door_left,:door_right)",
+                           {'name': 'config',
+                            'light': arg_config['light'],
+                            'heat': arg_config['heat'],
+                            'moist': arg_config['moist'],
+                            'rain': arg_config['rain'],
+                            'pump': arg_config['pump'],
+                            'water_lvl': arg_config['water_lvl'],
+                            'door_left': arg_config['door_left'],
+                            'door_right': arg_config['door_right']
+                            })
+
+    def get_config(self):
+        self.c.execute("""SELECT * 
+                          FROM pi_config
+                      """)
+        return self.c.fetchone()
+
+    def update_config(self, arg_config):
+        with self.conn:
+            arg_light = arg_config['light']
+            arg_heat = arg_config['heat']
+            arg_moist = arg_config['moist']
+            arg_rain = arg_config['rain']
+            arg_pump = arg_config['pump']
+            arg_water_lvl = arg_config['water_lvl']
+            arg_door_left = arg_config['door_left']
+            arg_door_right = arg_config['door_right']
+
+            self.c.execute("""UPDATE pi_config
+                              SET light = ?, heat = ?, moist = ?,
+                                  rain = ?, pump = ?, water_lvl = ?, door_left = ?, door_right = ?
+                              WHERE name='config';
+                          """, (arg_light, arg_heat, arg_moist, arg_rain, arg_pump, arg_water_lvl, arg_door_left, arg_door_right))
+
     # ................................................................................................
 
     def create_db(self):
@@ -181,45 +157,36 @@ class PiDB:
             self.conn = sqlite3.connect('piDB')
             self.c = self.conn.cursor()
 
-            self.c.execute("""CREATE TABLE sensor_light(
+            self.c.execute("""CREATE TABLE profile(
+                                name text primary key,
+                                light INTEGER,
+                                heatMin INTEGER,
+                                heatMax INTEGER,
+                                moistMin INTEGER,
+                                moistMax INTEGER,
+                                location text
+                            )""")
+            self.c.execute("""CREATE TABLE sensors_log(
                                 prob_date text primary key,
-                                prob_val integer
+                                light INTEGER,
+                                heat INTEGER,
+                                moist INTEGER,
+                                water_lvl INTEGER
+                            )""")
+            self.c.execute("""CREATE TABLE water(
+                                wateredTime text primary key,
+                                amount INTEGER 
                          )""")
-
-            self.c.execute("""CREATE TABLE sensor_heat(
-                                prob_date text primary key,
-                                prob_val integer
-                            )""")
-
-            self.c.execute("""CREATE TABLE sensor_moist(
-                                prob_date text primary key,
-                                prob_val integer
-                            )""")
-
-            self.c.execute("""CREATE TABLE sensor_rain(
-                                prob_date text primary key,
-                                prob_val integer
-                            )""")
-
-            self.c.execute("""CREATE TABLE sensor_water_lvl(
-                                prob_date text primary key,
-                                prob_val integer
-                            )""")
-
-            self.c.execute("""CREATE TABLE profiles(
+            self.c.execute("""CREATE TABLE pi_config(
                                 name text primary key,
                                 light INTEGER,
                                 heat INTEGER,
                                 moist INTEGER,
                                 rain INTEGER,
-                                last_changed text
-                            )""")
-
-            # ----------------
-            # the next table will remember the last time it used the pump.
-            # ----------------
-            self.c.execute("""CREATE TABLE water(
-                          wateredTime text primary key
+                                pump INTEGER,
+                                water_lvl INTEGER,
+                                door_left text,
+                                door_right text
                          )""")
 
             self.conn.commit()

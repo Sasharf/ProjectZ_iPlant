@@ -1,61 +1,246 @@
-
-from . import iPlant_sys
+import requests
+import os as os
+from . import iPlant_sys, utility
+from DB import DB
 import time
 import sys
 
+url = 'http://localhost:3000/'
+plant = {}
+db = {}
 
-def star_program():
+
+def start_program():
     program_starter()
 
-    iplant = iPlant_sys.IPlantSys()
-    run_choice = print_choices()
+    global db
+    global plant
+
+    db = DB.PiDB()
+    pi_config = db.get_config()
+
+    if pi_config is None:
+        print('Please enter Pi pins config')
+        pi_config = config_device()
+
+    plant = iPlant_sys.IPlantSys(utility.get_mac(), pi_config)
+
+    print('Device mac address: ', utility.get_mac())
+    profile = get_profile_from_db()
+    if profile is not None:
+        print('Profile: ', profile)
+        plant.set_profile_from_db(profile)
+    else:
+        change_profile()
 
     run_time = 0
+    run_choice = print_choices()
     print("-------------------Main loop started:------------------------------------ ")
     while run_time != int(run_choice):
-        print("-------------------", run_time)
+        print("--------------------------------------", run_time, '--------------------------------------')
 
         # -----------------------------
-        iplant.get_cmd_to_do()          # getting commands to do from server
-        check_water_lvl(iplant)         # checking if water lvl is normal, else sending report to server
-        check_if_to_water(iplant)       # checking if the plant need water, and water it if the water lvl high enough
-        check_if_whole_hour(iplant)     # checking if whole hour, if so then sending sensors status to server
+        get_cmd_to_do()            # getting commands to do from server
+        if plant.profile is not None:
+            check_water_lvl()       # checking if water lvl is normal, else sending report to server
+            check_if_to_water()     # checking if the plant need water, and water it if the water lvl high enough
+            check_if_whole_hour()   # checking if whole hour, if so then sending sensors status to server
         # -----------------------------
 
         run_time += 1
+        print('Sleeping 5 seconds...')
         time.sleep(5)
 
     program_ended()
 
+
+# Finished
+def get_cmd_to_do():
+    print("Getting commands to do from server:")
+    params = {
+        "mac": plant.mac,
+    }
+    try:
+        resp = requests.post(url+'deviceCommands/getCommands', json=params)
+        answer = resp.json()
+    except Exception as err:
+        print("Cant reach server")
+        return
+
+    if answer['success']:
+        print("There are commands to execute!")
+        print(answer['answer'])
+        do_commands(answer['answer'])
+
+    else:
+        print("No commands to execute!")
+
+
+# TODO: Not finished - depends on what commands we will have
+def do_commands(arg_commands):
+    for cmd in arg_commands:
+        print("Doing command:", cmd['command'])
+        if cmd['command'] == "init_device" and os.path.exists('piDB'):
+            init_db()
+        elif cmd['command'] == "set_profile":
+            change_profile()
+        elif cmd['command'] == "get_sensors_status":
+            send_sensors_status()
+        elif cmd['command'] == "water_now":
+            water_now()
+    return True
+
+
+# Finished
+def send_sensors_status():
+    data = plant.get_sensors_status()
+    db.insert_sensors_log(data)
+    try:
+        resp = requests.post(url+'sensorRecords/add', json=data)
+        answer = resp.json()
+
+        print("Server got answer? --> ", answer['success'])
+    except Exception as err:
+        print("Cant reach server")
+
+    return True
+
+
+# Finished
+def change_profile():
+    answer = get_profile_from_server()
+    print(answer)
+    if answer['success']:
+        if answer['device']:
+            set_profile(answer['answer'])
+        else:
+            print(answer['msg'])
+    elif answer['success'] is False:
+        print("Cant reach server")
+
+
+# Finished
+def get_profile_from_server():
+    data = {"mac": plant.mac}
+    print('Trying to get profile from server...')
+
+    try:
+        resp = requests.post(url + 'user_devices/getDeviceProfileByMac', json=data)
+        answer = resp.json()
+
+        print("Server got answer? --> ", answer['success'])
+    except Exception as err:
+        answer = {'success': False}
+
+    return answer
+
+
+# Finished
+def get_profile_from_db():
+    return db.get_profile()
+
+
+# Finished
+def set_profile(profile):
+    print('Setting profile: ')
+    print(profile)
+    if plant.profile is None:
+        db.set_profile_from_server(profile)
+        print('New profile been set')
+    else:
+        db.update_profile(profile)
+        print('Profile been updated')
+
+    plant.set_profile_from_server(profile)
+
+
+# Finished
+def init_db():
+    global db
+    db = None
+    os.remove('piDB')
+    db = DB.PiDB()
+
+
 # Finished
 def print_choices():
+    global plant
     choice = -1
     while choice != "1" and choice != "2":
         print("Commands:")
         print("1) Start main loop")
-        print("2) exit program")
+        print("2) Configure Pi pins")
+        print("3) check doors")
+        print("4) exit program")
 
         choice = input('Please enter command number:')
 
     if choice == "1":
         run_choice = input('Please enter how much time you would like the program to run(-1 for inf, 0 for exit): ')
-    if choice == "2" or run_choice == "0":
+    if choice == "2":
+        pi_config = config_device()
+        set_config(pi_config)
+        print_choices()
+    if choice == "3":
+        print("door status:", plant.doors.isDoorsOpen())
+        inner_choice = 0
+        while inner_choice != -1:
+            run_choice = input('1 for opening/closing doors,2 for door calibration,-1 to exit ')
+            if run_choice == 1:
+                plant.doors.doors()
+                print("door status: ", plant.doors.isDoorsOpen())
+            if run_choice == 2:
+                side = input('1 for up or -1 for down')
+                if side:
+                    plant.doors.calibrateUp()
+                else:
+                    plant.doors.calibrateDown()
+
+    if choice == "3" or run_choice == "0":
         program_ended()
         sys.exit()
 
     return run_choice
 
-# Fnished
-def check_if_whole_hour(iplant):
+
+def config_device():
+    pi_config = {}
+    pi_config['name'] = "config"
+    pi_config["light"] = input("Enter light sensor pin number(In adc): ")
+    pi_config["water_lvl"] = input("Enter water_lvl sensor pin number(adc): ")
+    pi_config["moist"] = input("Enter moist sensor pin number(In adc): ")
+    pi_config["heat"] = input("Enter heat sensor pin number: ")
+    pi_config["rain"] = input("Enter rain sensor pin number: ")
+    pi_config["pump"] = input("Enter pump sensor pin number: ")
+    pi_config["door_left"] = input("Enter door_left sensor pin number: ")
+    pi_config["door_right"] = input("Enter door_right sensor pin number: ")
+
+    config = db.get_config()
+
+    if config is not None:
+        db.update_config(pi_config)
+    else:
+        db.set_config(pi_config)
+
+    return pi_config
+
+
+def set_config(pi_config):
+    plant.set_pins_config(pi_config)
+
+
+# Finished
+def check_if_whole_hour():
     timestamp = time.time()
     if timestamp % 3600 == 0:
         print("sending sensors status to server")
-        iplant.send_sensors_status()
+        send_sensors_status()
+
 
 # TODO: - need to finish
-def check_water_lvl(iplant):
-    water_lvl = iplant.water_lvl.get_water_lvl()
-    somelimit = 123
+def check_water_lvl():
+    water_lvl = plant.water_lvl.get_water_lvl()
+    somelimit = 20
 
     if water_lvl < somelimit:
         print("Critical Water level in reservoir ", water_lvl, "L. Sending reminders to server.")
@@ -64,23 +249,88 @@ def check_water_lvl(iplant):
     else:
         print("Water level in reservoir ", water_lvl, "L, enough for now.")
 
+
 # TODO: Not started - need to do
 def send_reminders_to_server(water_lvl):
     return True
 
+
 # TODO: Started - need to finish
-def check_if_to_water(iplant):
+def check_if_to_water():
+    num_of_pumps = 0
     print("Checking if need to water the plant:")
-    if iplant.check_if_need_water():
-        iplant.water_now()
+    if plant.check_if_need_water():
+
+        send_start_water_session()
+        pump_amount = plant.water_now()
+        send_end_water_session()
+
+        if pump_amount > 0:
+            print('Watering session ended, watered for - ', pump_amount)
+            db.insert_water(pump_amount)
+            send_water_log(pump_amount)
     else:
         print("No need to water the plant for now.")
 
-# Fnished
+
+# Finished
+def water_now():
+    send_start_water_session()
+    pump_amount = plant.water_now()
+    send_end_water_session()
+    db.insert_water(pump_amount)
+    send_water_log(pump_amount)
+
+    print('Forced Watering session ended, watered for - ', pump_amount)
+
+
+# Finished
+def send_start_water_session():
+    print('Sending to server that water session started...')
+    data = {'mac': plant.mac}
+    try:
+        resp = requests.post(url + 'waterSessions/start', json=data)
+        answer = resp.json()
+
+        print("Server got answer? --> ", answer['success'])
+    except Exception as err:
+        print("Cant reach server")
+
+
+# Finished
+def send_end_water_session():
+    print('Sending to server that water session ended...')
+    data = {'mac': plant.mac}
+    try:
+        resp = requests.post(url + 'waterSessions/end', json=data)
+        answer = resp.json()
+
+        print("Server got answer? --> ", answer['success'])
+    except Exception as err:
+        print("Cant reach server")
+
+
+# Finished
+def send_water_log(amount):
+    print('Sending water log to server...')
+    data = {'amount': amount, 'mac': plant.mac}
+    try:
+        resp = requests.post(url + 'waterRecords/add', json=data)
+        answer = resp.json()
+
+        print("Server got answer? --> ", answer['success'])
+    except Exception as err:
+        print("Cant reach server")
+
+    return True
+
+
+# Finished
 def program_starter():
     print("")
     print("-------------------iPlant program STARTED!--------------------------------")
 
-# Fnished
+
+# Finished
 def program_ended():
     print("-------------------iPlant program ENDED!----------------------------------")

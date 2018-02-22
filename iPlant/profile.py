@@ -1,10 +1,12 @@
 
 
 class Profile:
-    name = ""
-    light = ""
-    heat = ""
-    moist = ""
-    rain = ""
-    outside = False
-    last_changed = ""
+    name = 'profile'
+
+    def __init__(self, profile):
+        self.light = profile[1]
+        self.heatMin = profile[2]
+        self.heatMax = profile[3]
+        self.moistMin = profile[4]
+        self.moistMax = profile[5]
+        self.location = profile[6]
