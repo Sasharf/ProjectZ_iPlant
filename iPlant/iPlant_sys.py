@@ -8,12 +8,13 @@ class IPlantSys:
     num_of_forced_pumps = 2
 
     def __init__(self, mac, arg_config):
+        print(arg_config[1])
         self.mac = mac
-        self.heat = Heat.Heat(arg_config[1])
-        self.light = Light.Light(arg_config[2])
+        self.light = Light.Light(arg_config[1])
+        self.water_lvl = WaterLvl.WaterLvl(arg_config[2])
         self.moist = Moist.Moist(arg_config[3])
-        self.rain = Rain.Rain(arg_config[4])
-        self.water_lvl = WaterLvl.WaterLvl(arg_config[5])
+        self.heat = Heat.Heat(arg_config[4])
+        self.rain = Rain.Rain(arg_config[5])
         self.pump = Pump.Pump(arg_config[6])
         self.doors = Doors.Doors(arg_config[7], arg_config[8], False)
 
@@ -40,6 +41,7 @@ class IPlantSys:
         arr_sensors.append(int(newProfile['moistMin']))
         arr_sensors.append(int(newProfile['moistMax']))
         arr_sensors.append(newProfile['location'])
+        arr_sensors.append(newProfile['fix_doors'])
         self.profile = profile.Profile(arr_sensors)
 
     # TODO: Not finished, change get_status to get_real_status
@@ -50,12 +52,21 @@ class IPlantSys:
             'light': self.light.get_status(),
             'moist': self.moist.get_status(),
             'water_lvl': self.water_lvl.get_status(),
+            'doors': self.doors.isDoorsOpen()
         }
         return arr_sensors
 
     # TODO: Started - need to finish
     def return_def_pump_amount(self):
         return self.pump.def_pump_amount
+
+    # Finished Sts
+    def check_rain(self):
+        return self.rain.get_status()
+
+    # Finished Sts
+    def check_heat(self):
+        return self.heat.get_status()
 
     # TODO: Started - need to finish
     def water_now(self):
@@ -93,3 +104,7 @@ class IPlantSys:
         if self.profile.moistMin <= curMoist:
             return False
         return True
+
+    # Finished Sts
+    def check_fix_door(self):
+        return self.profile.fix_doors

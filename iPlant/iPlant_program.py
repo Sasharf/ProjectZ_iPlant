@@ -42,9 +42,10 @@ def start_program():
         # -----------------------------
         get_cmd_to_do()            # getting commands to do from server
         if plant.profile is not None:
-            check_water_lvl()       # checking if water lvl is normal, else sending report to server
-            check_if_to_water()     # checking if the plant need water, and water it if the water lvl high enough
-            check_if_whole_hour()   # checking if whole hour, if so then sending sensors status to server
+            doors_based_on_weather()  # closing doors if raining
+            check_water_lvl()         # checking if water lvl is normal, else sending report to server
+            check_if_to_water()       # checking if the plant need water, and water it if the water lvl high enough
+            check_if_whole_hour()     # checking if whole hour, if so then sending sensors status to server
         # -----------------------------
 
         run_time += 1
@@ -145,7 +146,7 @@ def set_profile(profile):
     print('Setting profile: ')
     print(profile)
     if plant.profile is None:
-        db.set_profile_from_server(profile)
+        db.set_profile(profile)
         print('New profile been set')
     else:
         db.update_profile(profile)
@@ -166,26 +167,29 @@ def init_db():
 def print_choices():
     global plant
     choice = -1
-    while choice != "1" and choice != "2":
+    while choice < 1 or choice > 5:
         print("Commands:")
         print("1) Start main loop")
         print("2) Configure Pi pins")
-        print("3) check doors")
-        print("4) exit program")
+        print("3) Doors check")
+        print("4) Exit program")
 
-        choice = input('Please enter command number:')
+        choice = int(input('Please enter command number:'))
 
-    if choice == "1":
+    if choice == 1:
         run_choice = input('Please enter how much time you would like the program to run(-1 for inf, 0 for exit): ')
-    if choice == "2":
+    if choice == 2:
         pi_config = config_device()
         set_config(pi_config)
         print_choices()
-    if choice == "3":
-        print("door status:", plant.doors.isDoorsOpen())
+    if choice == 3:
+        print("Door status:", plant.doors.isDoorsOpen())
         inner_choice = 0
         while inner_choice != -1:
-            run_choice = input('1 for opening/closing doors,2 for door calibration,-1 to exit ')
+            print("(-)  1 to open the doors")
+            print('(-)  2 for doors calibrations')
+            print('(-) -1 to exit')
+            run_choice = int(input('Please enter command number:'))
             if run_choice == 1:
                 plant.doors.doors()
                 print("door status: ", plant.doors.isDoorsOpen())
@@ -196,24 +200,25 @@ def print_choices():
                 else:
                     plant.doors.calibrateDown()
 
-    if choice == "3" or run_choice == "0":
+    if choice == 3 or run_choice == 0:
         program_ended()
         sys.exit()
 
     return run_choice
 
 
+# Finished
 def config_device():
-    pi_config = {}
-    pi_config['name'] = "config"
-    pi_config["light"] = input("Enter light sensor pin number(In adc): ")
-    pi_config["water_lvl"] = input("Enter water_lvl sensor pin number(adc): ")
-    pi_config["moist"] = input("Enter moist sensor pin number(In adc): ")
-    pi_config["heat"] = input("Enter heat sensor pin number: ")
-    pi_config["rain"] = input("Enter rain sensor pin number: ")
-    pi_config["pump"] = input("Enter pump sensor pin number: ")
-    pi_config["door_left"] = input("Enter door_left sensor pin number: ")
-    pi_config["door_right"] = input("Enter door_right sensor pin number: ")
+    pi_config = []
+    pi_config.append("Stss")
+    pi_config.append(input("Enter light sensor pin number(In adc): "))
+    pi_config.append(input("Enter water_lvl sensor pin number(adc): "))
+    pi_config.append(input("Enter moist sensor pin number(In adc): "))
+    pi_config.append(input("Enter heat sensor pin number: "))
+    pi_config.append(input("Enter rain sensor pin number: "))
+    pi_config.append(input("Enter pump sensor pin number: "))
+    pi_config.append(input("Enter door_left sensor pin number: "))
+    pi_config.append(input("Enter door_right sensor pin number: "))
 
     config = db.get_config()
 
@@ -225,6 +230,7 @@ def config_device():
     return pi_config
 
 
+# Finished
 def set_config(pi_config):
     plant.set_pins_config(pi_config)
 
@@ -282,6 +288,25 @@ def water_now():
     send_water_log(pump_amount)
 
     print('Forced Watering session ended, watered for - ', pump_amount)
+
+
+# Finished Sts
+def doors_based_on_weather():
+    if plant.check_fix_door():  # if fixed doors enabled
+        return
+
+    profile_max_heat = plant.profile.heatMax
+    profile_min_heat = plant.profile.heatMin
+    current_heat = plant.check_heat()
+    rain_status = plant.check_rain()
+    doors_status = plant.doors.isDoorsOpen()
+
+    if rain_status and doors_status:  # if rainy & doors open
+        plant.doors.doors()
+    elif current_heat - 2 > profile_max_heat and not doors_status:  # if hot and door closed
+        plant.doors.doors()
+    elif current_heat + 2 < profile_min_heat and doors_status:  # if cold and opened
+        plant.doors.doors()
 
 
 # Finished

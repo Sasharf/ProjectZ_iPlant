@@ -55,14 +55,15 @@ class PiDB:
 
     def set_profile(self, arg_profile):
         with self.conn:
-            self.c.execute("INSERT INTO profile values (:name,:light,:heatMin,:heatMax,:moistMin,:moistMax,:location)",
+            self.c.execute("INSERT INTO profile values (:name,:light,:heatMin,:heatMax,:moistMin,:moistMax,:location,:fix_doors)",
                            {'name': 'profile',
                             'light': arg_profile['light'],
                             'heatMin': arg_profile['heatMin'],
                             'heatMax': arg_profile['heatMax'],
                             'moistMin': arg_profile['moistMin'],
                             'moistMax': arg_profile['moistMax'],
-                            'location': arg_profile['location']
+                            'location': arg_profile['location'],
+                            'fix_doors': arg_profile['fix_doors']
                             })
 
     def get_profile(self):
@@ -79,12 +80,13 @@ class PiDB:
             arg_moistMin = arg_profile['moistMin']
             arg_moistMax = arg_profile['moistMax']
             arg_location = arg_profile['location']
+            arg_fix_doors = arg_profile['fix_doors']
 
             self.c.execute("""UPDATE profile
                               SET light = ?, heatMin = ?, heatMax = ?,
-                                  moistMin = ?, moistMax = ?, location = ?
+                                  moistMin = ?, moistMax = ?, location = ?, fix_doors = ?
                               WHERE name='profile';
-                          """, (arg_light, arg_heatMin, arg_heatMax, arg_moistMin, arg_moistMax, arg_location))
+                          """, (arg_light, arg_heatMin, arg_heatMax, arg_moistMin, arg_moistMax, arg_location, arg_fix_doors))
 
     # ..............................WATERING............................................................
     # ................................................................................................
@@ -115,14 +117,14 @@ class PiDB:
         with self.conn:
             self.c.execute("INSERT INTO pi_config values (:name,:light,:heat,:moist,:rain,:pump,:water_lvl,:door_left,:door_right)",
                            {'name': 'config',
-                            'light': arg_config['light'],
-                            'heat': arg_config['heat'],
-                            'moist': arg_config['moist'],
-                            'rain': arg_config['rain'],
-                            'pump': arg_config['pump'],
-                            'water_lvl': arg_config['water_lvl'],
-                            'door_left': arg_config['door_left'],
-                            'door_right': arg_config['door_right']
+                            'light': arg_config[1],
+                            'water_lvl': arg_config[2],
+                            'moist': arg_config[3],
+                            'heat': arg_config[4],
+                            'rain': arg_config[5],
+                            'pump': arg_config[6],
+                            'door_left': arg_config[7],
+                            'door_right': arg_config[8]
                             })
 
     def get_config(self):
@@ -164,7 +166,8 @@ class PiDB:
                                 heatMax INTEGER,
                                 moistMin INTEGER,
                                 moistMax INTEGER,
-                                location text
+                                location text,
+                                fix_doors boolean
                             )""")
             self.c.execute("""CREATE TABLE sensors_log(
                                 prob_date text primary key,

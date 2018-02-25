@@ -16,7 +16,7 @@ class Moist:
         try:
             return self.adc.read_adc(self.pin_num, gain=1)
         except Exception as err:
-            return randint(0, 100)
+            return 0
 
     def get_status(self):
         return randint(0, 100)

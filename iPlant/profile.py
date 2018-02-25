@@ -10,3 +10,4 @@ class Profile:
         self.moistMin = profile[4]
         self.moistMax = profile[5]
         self.location = profile[6]
+        self.fix_doors = profile[7]

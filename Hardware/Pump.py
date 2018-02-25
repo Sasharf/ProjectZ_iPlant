@@ -4,6 +4,7 @@ import time
 
 # import RPi.GPIO as GPIO
 # GPIO.setmode(GPIO.BCM)
+# GPIO.setwarnings(False)
 
 
 class Pump:
@@ -21,7 +22,6 @@ class Pump:
         return True
 
     # def pump_now_real(self):
-    #     GPIO.setmode(GPIO.BCM)
     #     GPIO.setup(self.pin_num, GPIO.OUT)
     #
     #     GPIO.output(self.pin_num, GPIO.LOW)

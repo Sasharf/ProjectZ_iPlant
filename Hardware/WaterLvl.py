@@ -2,7 +2,6 @@ from random import randint
 import Adafruit_ADS1x15
 
 
-
 class WaterLvl:
     pin_num = None
     try:
@@ -20,7 +19,7 @@ class WaterLvl:
         try:
             return self.adc.read_adc(self.pin_num, gain=1)
         except Exception as err:
-            return randint(0, 100)
+            return 0
 
     def get_water_lvl(selfs):
         return randint(0, 100)
