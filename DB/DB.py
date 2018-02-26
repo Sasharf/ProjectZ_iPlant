@@ -115,7 +115,7 @@ class PiDB:
 
     def set_config(self, arg_config):
         with self.conn:
-            self.c.execute("INSERT INTO pi_config values (:name,:light,:heat,:moist,:rain,:pump,:water_lvl,:door_left,:door_right)",
+            self.c.execute("INSERT INTO pi_config values (:name,:light,:water_lvl,:moist,:heat,:rain,:pump,:door_left,:door_right)",
                            {'name': 'config',
                             'light': arg_config[1],
                             'water_lvl': arg_config[2],
@@ -135,20 +135,20 @@ class PiDB:
 
     def update_config(self, arg_config):
         with self.conn:
-            arg_light = arg_config['light']
-            arg_heat = arg_config['heat']
-            arg_moist = arg_config['moist']
-            arg_rain = arg_config['rain']
-            arg_pump = arg_config['pump']
-            arg_water_lvl = arg_config['water_lvl']
-            arg_door_left = arg_config['door_left']
-            arg_door_right = arg_config['door_right']
+            arg_light = arg_config[1]
+            arg_water_lvl = arg_config[2]
+            arg_moist = arg_config[3]
+            arg_heat = arg_config[4]
+            arg_rain = arg_config[5]
+            arg_pump = arg_config[6]
+            arg_door_left = arg_config[7]
+            arg_door_right = arg_config[8]
 
             self.c.execute("""UPDATE pi_config
-                              SET light = ?, heat = ?, moist = ?,
-                                  rain = ?, pump = ?, water_lvl = ?, door_left = ?, door_right = ?
+                              SET light = ?, moist = ?, water_lvl = ?, heat = ?,
+                                  rain = ?, pump = ?, door_left = ?, door_right = ?
                               WHERE name='config';
-                          """, (arg_light, arg_heat, arg_moist, arg_rain, arg_pump, arg_water_lvl, arg_door_left, arg_door_right))
+                          """, (arg_light, arg_water_lvl, arg_moist, arg_heat, arg_rain, arg_pump, arg_door_left, arg_door_right))
 
     # ................................................................................................
 
@@ -183,11 +183,11 @@ class PiDB:
             self.c.execute("""CREATE TABLE pi_config(
                                 name text primary key,
                                 light INTEGER,
-                                heat INTEGER,
+                                water_lvl INTEGER,
                                 moist INTEGER,
+                                heat INTEGER,
                                 rain INTEGER,
                                 pump INTEGER,
-                                water_lvl INTEGER,
                                 door_left text,
                                 door_right text
                          )""")

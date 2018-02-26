@@ -10,7 +10,7 @@ class Moist:
         print(err)
 
     def __init__(self, pin):
-        self.pin_num = pin
+        self.pin_num = int(pin)
 
     def get_real_status(self):
         try:

@@ -62,7 +62,7 @@ def get_cmd_to_do():
         "mac": plant.mac,
     }
     try:
-        resp = requests.post(url+'deviceCommands/getCommands', json=params)
+        resp = requests.post(url+'deviceCommands/getCommands', timeout=0.05, json=params)
         answer = resp.json()
     except Exception as err:
         print("Cant reach server")
@@ -97,7 +97,7 @@ def send_sensors_status():
     data = plant.get_sensors_status()
     db.insert_sensors_log(data)
     try:
-        resp = requests.post(url+'sensorRecords/add', json=data)
+        resp = requests.post(url+'sensorRecords/add', timeout=0.05, json=data)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -126,7 +126,7 @@ def get_profile_from_server():
     print('Trying to get profile from server...')
 
     try:
-        resp = requests.post(url + 'user_devices/getDeviceProfileByMac', json=data)
+        resp = requests.post(url + 'user_devices/getDeviceProfileByMac', timeout=0.05, json=data)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -158,57 +158,16 @@ def set_profile(profile):
 # Finished
 def init_db():
     global db
+    print('DB init started...')
     db = None
     os.remove('piDB')
     db = DB.PiDB()
-
-
-# Finished
-def print_choices():
-    global plant
-    choice = -1
-    while choice < 1 or choice > 5:
-        print("Commands:")
-        print("1) Start main loop")
-        print("2) Configure Pi pins")
-        print("3) Doors check")
-        print("4) Exit program")
-
-        choice = int(input('Please enter command number:'))
-
-    if choice == 1:
-        run_choice = input('Please enter how much time you would like the program to run(-1 for inf, 0 for exit): ')
-    if choice == 2:
-        pi_config = config_device()
-        set_config(pi_config)
-        print_choices()
-    if choice == 3:
-        print("Door status:", plant.doors.isDoorsOpen())
-        inner_choice = 0
-        while inner_choice != -1:
-            print("(-)  1 to open the doors")
-            print('(-)  2 for doors calibrations')
-            print('(-) -1 to exit')
-            run_choice = int(input('Please enter command number:'))
-            if run_choice == 1:
-                plant.doors.doors()
-                print("door status: ", plant.doors.isDoorsOpen())
-            if run_choice == 2:
-                side = input('1 for up or -1 for down')
-                if side:
-                    plant.doors.calibrateUp()
-                else:
-                    plant.doors.calibrateDown()
-
-    if choice == 3 or run_choice == 0:
-        program_ended()
-        sys.exit()
-
-    return run_choice
+    print('DB init finished...')
 
 
 # Finished
 def config_device():
+    print('Pi config in progress:')
     pi_config = []
     pi_config.append("Stss")
     pi_config.append(input("Enter light sensor pin number(In adc): "))
@@ -301,11 +260,15 @@ def doors_based_on_weather():
     rain_status = plant.check_rain()
     doors_status = plant.doors.isDoorsOpen()
 
+    print('Checking heat....', current_heat, ' C')
     if rain_status and doors_status:  # if rainy & doors open
+        print('Rainy outside, closing doors...')
         plant.doors.doors()
     elif current_heat - 2 > profile_max_heat and not doors_status:  # if hot and door closed
+        print('Opening doors, current heat ', current_heat, ' is above needed heat ', profile_max_heat)
         plant.doors.doors()
     elif current_heat + 2 < profile_min_heat and doors_status:  # if cold and opened
+        print('Opening doors, current heat ', current_heat, ' is below needed heat ', profile_min_heat)
         plant.doors.doors()
 
 
@@ -314,7 +277,7 @@ def send_start_water_session():
     print('Sending to server that water session started...')
     data = {'mac': plant.mac}
     try:
-        resp = requests.post(url + 'waterSessions/start', json=data)
+        resp = requests.post(url + 'waterSessions/start', timeout=0.05, json=data)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -327,7 +290,7 @@ def send_end_water_session():
     print('Sending to server that water session ended...')
     data = {'mac': plant.mac}
     try:
-        resp = requests.post(url + 'waterSessions/end', json=data)
+        resp = requests.post(url + 'waterSessions/end', timeout=0.05, json=data)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -340,7 +303,7 @@ def send_water_log(amount):
     print('Sending water log to server...')
     data = {'amount': amount, 'mac': plant.mac}
     try:
-        resp = requests.post(url + 'waterRecords/add', json=data)
+        resp = requests.post(url + 'waterRecords/add', timeout=0.05, json=data)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -348,6 +311,69 @@ def send_water_log(amount):
         print("Cant reach server")
 
     return True
+
+
+# Finished
+def print_choices():
+    global plant
+    choice = -1
+
+    while True:
+        print("Commands:")
+        print("1) Start main loop")
+        print("2) Configure Pi pins")
+        print("3) Init DB")
+        print("4) Doors check")
+        print("0) Exit program")
+
+        choice = int(input('Please enter command number:'))
+
+        if choice == 1:
+            run_choice = int(input('Please enter how much time you would like the program to run(-1 for inf, 0 for back):'))
+            if run_choice == 0:
+                continue
+            else:
+                break
+        if choice == 2:
+            pi_config = config_device()
+            set_config(pi_config)
+        if choice == 3:
+            init_db()
+            pi_config = config_device()
+            set_config(pi_config)
+        if choice == 4:
+            while True:
+                print("Door status:", plant.doors.isDoorsOpen())
+                print("(-) 1 to open the doors")
+                print('(-) 2 for doors calibrations')
+                print('(-) 3 Change door status')
+                print('(-) 0 for back')
+                door_choice = int(input('Please enter command number:'))
+                if door_choice == 1:
+                    plant.doors.doors()
+                if door_choice == 2:
+                    while True:
+                        print('(--) Door calibrations:')
+                        print("(--)  1 For up")
+                        print('(--) -1 For down')
+                        print('(--)  0 Back')
+                        side = int(input('Enter command'))
+                        if side == 1:
+                            plant.doors.calibrateUp()
+                        elif side == -1:
+                            plant.doors.calibrateDown()
+                        elif side == 0:
+                            break
+                if door_choice == 3:
+                    plant.doors.changeDoorStatus()
+                if door_choice == 0:
+                    break
+
+        if choice == 0:
+            program_ended()
+            sys.exit()
+
+    return run_choice
 
 
 # Finished

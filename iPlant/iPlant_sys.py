@@ -8,7 +8,7 @@ class IPlantSys:
     num_of_forced_pumps = 2
 
     def __init__(self, mac, arg_config):
-        print(arg_config[1])
+        print('Current config: ', arg_config)
         self.mac = mac
         self.light = Light.Light(arg_config[1])
         self.water_lvl = WaterLvl.WaterLvl(arg_config[2])
@@ -19,13 +19,13 @@ class IPlantSys:
         self.doors = Doors.Doors(arg_config[7], arg_config[8], False)
 
     def set_pins_config(self, arg_config):
-        self.heat = Heat.Heat(arg_config['heat'])
-        self.light = Light.Light(arg_config['light'])
-        self.moist = Moist.Moist(arg_config['moist'])
-        self.rain = Rain.Rain(arg_config['rain'])
-        self.water_lvl = WaterLvl.WaterLvl(arg_config['water_lvl'])
-        self.pump = Pump.Pump(arg_config['pump'])
-        self.doors = Doors.Doors(arg_config['door_left'], arg_config['door_right'], False)
+        self.light = Light.Light(arg_config[1])
+        self.water_lvl = WaterLvl.WaterLvl(arg_config[2])
+        self.moist = Moist.Moist(arg_config[3])
+        self.heat = Heat.Heat(arg_config[4])
+        self.rain = Rain.Rain(arg_config[5])
+        self.pump = Pump.Pump(arg_config[6])
+        self.doors = Doors.Doors(arg_config[7], arg_config[8], False)
 
     # Finished
     def set_profile_from_db(self, newProfile):

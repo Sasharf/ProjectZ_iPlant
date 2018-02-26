@@ -10,15 +10,15 @@ class Light:
         print(err)
 
     def __init__(self, pin):
-        self.pin_num = pin
+        self.pin_num = int(pin)
 
-    def get_real_status(self):
+    def get_status(self):
         try:
             return self.adc.read_adc(self.pin_num, gain=1)
         except Exception as err:
             return 0
 
-    def get_status(self):
+    def get_real_status(self):
         return randint(0, 100)
 
 # ToDO:

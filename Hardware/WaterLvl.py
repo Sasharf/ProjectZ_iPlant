@@ -10,7 +10,7 @@ class WaterLvl:
         print(err)
 
     def __init__(self, pin):
-        self.pin_num = pin
+        self.pin_num = int(pin)
 
     def get_status(self):
         return randint(0, 100)
