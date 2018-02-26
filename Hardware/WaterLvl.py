@@ -12,14 +12,14 @@ class WaterLvl:
     def __init__(self, pin):
         self.pin_num = int(pin)
 
-    def get_status(self):
-        return randint(0, 100)
-
-    def get_real_water_lvl(self):
+    def get_water_lvl(self):
         try:
-            return self.adc.read_adc(self.pin_num, gain=1)
+            raw_data = self.adc.read_adc(self.pin_num, gain=1)
+            if raw_data > 23000:
+                return 100
+            return raw_data * 100 / 2300
         except Exception as err:
             return 0
 
-    def get_water_lvl(selfs):
+    def get_real_water_lvl(selfs):
         return randint(0, 100)

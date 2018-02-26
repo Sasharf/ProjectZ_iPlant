@@ -324,6 +324,7 @@ def print_choices():
         print("2) Configure Pi pins")
         print("3) Init DB")
         print("4) Doors check")
+        print("5) Sensor check")
         print("0) Exit program")
 
         choice = int(input('Please enter command number:'))
@@ -368,6 +369,31 @@ def print_choices():
                     plant.doors.changeDoorStatus()
                 if door_choice == 0:
                     break
+                if choice == 5:
+                    while True:
+                        print("(-) 1 to check light")
+                        print('(-) 2 to check water level')
+                        print('(-) 3 to check moist')
+                        print('(-) 4 to check heat')
+                        print("(-) 5 to check rain")
+                        print('(-) 6 to check pump, not ready yet to check')
+                        print('(-) 0 to main menu')
+
+                        sensor_choice = int(input('Please enter command number:'))
+                        if sensor_choice == 1:
+                            print('light: ', plant.check_light(), '%')
+                        if sensor_choice == 2:
+                            print('water level: ', plant.check_water_lvl(), '%')
+                        if sensor_choice == 3:
+                            print('moist level: ', plant.check_moist(), '%')
+                        if sensor_choice == 4:
+                            print('heat level: ', plant.check_heat(), '%')
+                        if sensor_choice == 5:
+                            print('is it raining?: ', plant.check_heat(), ' ||"1" for rain "0" otherwise')
+                        if sensor_choice == 6:
+                            print('force pump: ', plant.water_now())
+                        if sensor_choice == 0:
+                            break
 
         if choice == 0:
             program_ended()

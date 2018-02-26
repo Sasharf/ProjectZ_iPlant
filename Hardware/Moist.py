@@ -12,11 +12,15 @@ class Moist:
     def __init__(self, pin):
         self.pin_num = int(pin)
 
-    def get_real_status(self):
+    def get_status(self):
         try:
-            return self.adc.read_adc(self.pin_num, gain=1)
+            raw_data = self.adc.read_adc(self.pin_num, gain=1)
+            if raw_data > 18000:
+                return 100
+            return raw_data * 100 / 18000
+
         except Exception as err:
             return 0
 
-    def get_status(self):
+    def get_real_status(self):
         return randint(0, 100)

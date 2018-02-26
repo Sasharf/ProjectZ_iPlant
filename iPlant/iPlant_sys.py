@@ -68,6 +68,10 @@ class IPlantSys:
     def check_heat(self):
         return self.heat.get_status()
 
+    # Finished Sts
+    def check_light(self):
+        return self.light.get_status()
+
     # TODO: Started - need to finish
     def water_now(self):
         water_lvl = self.water_lvl.get_water_lvl()
@@ -104,6 +108,14 @@ class IPlantSys:
         if self.profile.moistMin <= curMoist:
             return False
         return True
+
+    #Finished Sts
+    def check_water_level(self):
+        return self.water_lvl.get_water_lvl()
+
+    #Finished Sts
+    def check_moist(self):
+        return self.moist.get_status()
 
     # Finished Sts
     def check_fix_door(self):

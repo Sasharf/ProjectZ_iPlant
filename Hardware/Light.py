@@ -14,7 +14,11 @@ class Light:
 
     def get_status(self):
         try:
-            return self.adc.read_adc(self.pin_num, gain=1)
+            raw_data = self.adc.read_adc(self.pin_num, gain=1)
+            if raw_data > 37000:
+                return 100
+            return raw_data * 100 / 37000
+
         except Exception as err:
             return 0
 

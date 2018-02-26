@@ -19,11 +19,11 @@ class Rain:
     def get_status(self):
         drop_counter = 0
         try:
-            for i in range(0, 10):
+            for i in range(0, 10):  # 3 out of 10 checks found water drops
                 state = GPIO.input(self.pin_num)
-                if state == 0:
+                if state != 1:
                     drop_counter += 1
-                if drop_counter == 2:
+                if drop_counter == 3:
                     return 1  # rainy
                 time.sleep(self.sleep_time)
             return 0

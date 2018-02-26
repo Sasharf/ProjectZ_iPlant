@@ -1,4 +1,5 @@
 import RPi.GPIO as GPIO
+import time
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
@@ -9,8 +10,6 @@ class Doors:
 
     door_movement_time = 800
     calibrate_time = 100
-    side_up = -1
-    side_down = 1
 
     Seq = [[1, 0, 0, 1],
            [1, 0, 0, 0],
@@ -41,13 +40,8 @@ class Doors:
 
     def moveDoors(self, side, door_move_time):
 
-        if side == self.left:
-            stepDirR = -1
-            stepDirL = 1
-        else:
-            stepDirR = 1
-            stepDirL = -1
-
+        stepDirR = -1 * side
+        stepDirL = 1 * side
         stepCounterL = 0
         stepCounterR = 0
         loopCounter = door_move_time
@@ -79,6 +73,7 @@ class Doors:
                     stepCounterL = 0
                 if stepCounterL < 0:
                     stepCounterL = self.stepCount + stepDirL
+                time.sleep(0.002)
 
         except KeyboardInterrupt:
             print('error')
@@ -89,19 +84,19 @@ class Doors:
         return
 
     def calibrateUp(self):
-        self.moveDoors(1, self.calibrate_time)
+        self.moveDoors(-1, self.calibrate_time)
         return
 
     def calibrateDown(self):
-        self.moveDoors(-1, self.calibrate_time)
+        self.moveDoors(1, self.calibrate_time)
         return
 
     def doors(self):
         if not self.is_open:
-            self.moveDoors(1, self.door_movement_time)
+            self.moveDoors(-1, self.door_movement_time)
             self.is_open = True
         else:
-            self.moveDoors(-1, self.door_movement_time)
+            self.moveDoors(1, self.door_movement_time)
             self.is_open = False
 
     def setDoorsStatus(self, is_open):
