@@ -5,7 +5,7 @@ import Adafruit_ADS1x15
 class Light:
     pin_num = None
     try:
-        adc = Adafruit_ADS1x15.ADS1015()
+        adc = Adafruit_ADS1x15.ADS1115()
     except Exception as err:
         print(err)
 
@@ -15,17 +15,14 @@ class Light:
     def get_status(self):
         try:
             raw_data = self.adc.read_adc(self.pin_num, gain=1)
-            if raw_data > 37000:
+            if raw_data > 30700:
                 return 100
-            return raw_data * 100 / 37000
+            if raw_data == 0:
+                return 0
+            return int(raw_data * 100 / 30700)
 
         except Exception as err:
             return 0
 
     def get_real_status(self):
         return randint(0, 100)
-
-# ToDO:
-# write on each sensor the range of the signal given.
-# F.E: light goes approx from 7 to 24k
-#      moist goes approx from 7 ( dry ), then jumps straight to 7k, then, depends on water lvl untill 15k

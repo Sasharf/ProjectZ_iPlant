@@ -387,9 +387,9 @@ def print_choices():
                         if sensor_choice == 3:
                             print('moist level: ', plant.check_moist(), '%')
                         if sensor_choice == 4:
-                            print('heat level: ', plant.check_heat(), '%')
+                            print('heat level: ', plant.check_heat(), 'C')
                         if sensor_choice == 5:
-                            print('is it raining?: ', plant.check_heat(), ' ||"1" for rain "0" otherwise')
+                            print('is it raining?: ', plant.check_rain(), ' ||"1" for rain "0" otherwise')
                         if sensor_choice == 6:
                             print('force pump: ', plant.water_now())
                         if sensor_choice == 0:
