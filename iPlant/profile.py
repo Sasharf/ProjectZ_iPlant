@@ -11,3 +11,15 @@ class Profile:
         self.moistMax = profile[5]
         self.location = profile[6]
         self.fix_doors = profile[7]
+
+    def get_profile(self):
+        profile = {}
+        profile['light'] = self.light
+        profile['heatMin'] = self.heatMin
+        profile['heatMax'] = self.heatMax
+        profile['moistMin'] = self.moistMin
+        profile['moistMax'] = self.moistMax
+        profile['location'] = self.location
+        profile['fix_doors'] = self.fix_doors
+
+        return profile

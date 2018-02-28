@@ -31,10 +31,11 @@ class PiDB:
         heat = data['heat']
         moist = data['moist']
         water_lvl = data['water_lvl']
+        doors = data['doors']
 
         with self.conn:
-            self.c.execute("INSERT INTO sensors_log values (:prob_date,:light,:heat,:moist,:water_lvl)",
-                           {'prob_date': time.time(), 'light': light, 'heat': heat, 'moist': moist, 'water_lvl': water_lvl})
+            self.c.execute("INSERT INTO sensors_log values (:prob_date,:light,:heat,:moist,:water_lvl,:doors)",
+                           {'prob_date': time.time(), 'light': light, 'heat': heat, 'moist': moist, 'water_lvl': water_lvl, 'doors':doors})
 
     def get_last_sensors_log(self):
         self.c.execute("""SELECT * 
@@ -65,6 +66,9 @@ class PiDB:
                             'location': arg_profile['location'],
                             'fix_doors': arg_profile['fix_doors']
                             })
+    def delete_profile(self):
+        with self.conn:
+            self.c.execute("DELETE FROM profile WHERE name = 'profile'")
 
     def get_profile(self):
         self.c.execute("""SELECT * 
@@ -174,7 +178,8 @@ class PiDB:
                                 light INTEGER,
                                 heat INTEGER,
                                 moist INTEGER,
-                                water_lvl INTEGER
+                                water_lvl INTEGER,
+                                doors boolean
                             )""")
             self.c.execute("""CREATE TABLE water(
                                 wateredTime text primary key,

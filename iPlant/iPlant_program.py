@@ -5,11 +5,12 @@ from DB import DB
 import time
 import sys
 
-url = 'http://localhost:3000/'
+url = 'http://192.168.43.24:3000/'
 plant = {}
 db = {}
-
-
+heat_sample = {}
+server_timeout = 0.5
+main_loop_time = 3
 def start_program():
     program_starter()
 
@@ -23,7 +24,7 @@ def start_program():
         print('Please enter Pi pins config')
         pi_config = config_device()
 
-    plant = iPlant_sys.IPlantSys(utility.get_mac(), pi_config)
+    plant = iPlant_sys.IPlantSys(utility.get_mac(), pi_config, db)
 
     print('Device mac address: ', utility.get_mac())
     profile = get_profile_from_db()
@@ -31,6 +32,7 @@ def start_program():
         print('Profile: ', profile)
         plant.set_profile_from_db(profile)
     else:
+        print('Profile not set yet')
         change_profile()
 
     run_time = 0
@@ -49,8 +51,8 @@ def start_program():
         # -----------------------------
 
         run_time += 1
-        print('Sleeping 5 seconds...')
-        time.sleep(5)
+        print('Sleeping ',main_loop_time,' seconds...')
+        time.sleep(main_loop_time)
 
     program_ended()
 
@@ -62,7 +64,7 @@ def get_cmd_to_do():
         "mac": plant.mac,
     }
     try:
-        resp = requests.post(url+'deviceCommands/getCommands', timeout=0.05, json=params)
+        resp = requests.post(url+'deviceCommands/getCommands', timeout=server_timeout, json=params)
         answer = resp.json()
     except Exception as err:
         print("Cant reach server")
@@ -85,6 +87,8 @@ def do_commands(arg_commands):
             init_db()
         elif cmd['command'] == "set_profile":
             change_profile()
+        elif cmd['command'] == "activate_doors":
+            activate_doors()
         elif cmd['command'] == "get_sensors_status":
             send_sensors_status()
         elif cmd['command'] == "water_now":
@@ -97,7 +101,7 @@ def send_sensors_status():
     data = plant.get_sensors_status()
     db.insert_sensors_log(data)
     try:
-        resp = requests.post(url+'sensorRecords/add', timeout=0.05, json=data)
+        resp = requests.post(url+'sensorRecords/add', timeout=server_timeout, json=data)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -106,7 +110,8 @@ def send_sensors_status():
 
     return True
 
-
+def activate_doors():
+    plant.doors.doors()
 # Finished
 def change_profile():
     answer = get_profile_from_server()
@@ -126,7 +131,7 @@ def get_profile_from_server():
     print('Trying to get profile from server...')
 
     try:
-        resp = requests.post(url + 'user_devices/getDeviceProfileByMac', timeout=0.05, json=data)
+        resp = requests.post(url + 'user_devices/getDeviceProfileByMac', timeout=server_timeout, json=data)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -252,32 +257,45 @@ def water_now():
 # Finished Sts
 def doors_based_on_weather():
     if plant.check_fix_door():  # if fixed doors enabled
+        print("Doors fixed, doing nothing ;)")
         return
 
     profile_max_heat = plant.profile.heatMax
     profile_min_heat = plant.profile.heatMin
+    print("checking for heat....")
     current_heat = plant.check_heat()
+    print(current_heat," ..done")
+    print("checking for rain...")
     rain_status = plant.check_rain()
+    print(rain_status," ..done")
     doors_status = plant.doors.isDoorsOpen()
+    print("current door status = ",doors_status)
 
-    print('Checking heat....', current_heat, ' C')
     if rain_status and doors_status:  # if rainy & doors open
         print('Rainy outside, closing doors...')
         plant.doors.doors()
+   # elif not rain_status:
+       # optimal_door_status = check_better_state()
+       # if doors_status != optimal_door_status:
+       #     plant.doors.doors()
     elif current_heat - 2 > profile_max_heat and not doors_status:  # if hot and door closed
-        print('Opening doors, current heat ', current_heat, ' is above needed heat ', profile_max_heat)
+        print('Opening doors, too hot , current heat: ', current_heat,'(-2) max heat: ', profile_max_heat)
         plant.doors.doors()
-    elif current_heat + 2 < profile_min_heat and doors_status:  # if cold and opened
-        print('Opening doors, current heat ', current_heat, ' is below needed heat ', profile_min_heat)
+    elif current_heat + 2 < profile_min_heat and doors_status:  # if cold and opened doors
+        print('Opening doors,too cold ,  current heat ', current_heat, '(+2) min heat: ', profile_min_heat)
         plant.doors.doors()
 
-
+def check_better_state():
+    current_heat = plant.check_heat()
+    logged_heat = None 
+    current_time = time.time()
+     
 # Finished
 def send_start_water_session():
     print('Sending to server that water session started...')
     data = {'mac': plant.mac}
     try:
-        resp = requests.post(url + 'waterSessions/start', timeout=0.05, json=data)
+        resp = requests.post(url + 'waterSessions/start', timeout=server_timeout, json=data)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -290,7 +308,7 @@ def send_end_water_session():
     print('Sending to server that water session ended...')
     data = {'mac': plant.mac}
     try:
-        resp = requests.post(url + 'waterSessions/end', timeout=0.05, json=data)
+        resp = requests.post(url + 'waterSessions/end', timeout=server_timeout, json=data)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -303,7 +321,7 @@ def send_water_log(amount):
     print('Sending water log to server...')
     data = {'amount': amount, 'mac': plant.mac}
     try:
-        resp = requests.post(url + 'waterRecords/add', timeout=0.05, json=data)
+        resp = requests.post(url + 'waterRecords/add', timeout=server_timeout, json=data)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -325,6 +343,8 @@ def print_choices():
         print("3) Init DB")
         print("4) Doors check")
         print("5) Sensor check")
+        print("6) Functions check")
+        print("7) Change  profile")
         print("0) Exit program")
 
         choice = int(input('Please enter command number:'))
@@ -376,7 +396,7 @@ def print_choices():
                 print('(-) 3 to check moist')
                 print('(-) 4 to check heat')
                 print("(-) 5 to check rain")
-                print('(-) 6 to check pump, not ready yet to check')
+                print('(-) 6 to check pump, not yet')
                 print('(-) 0 to main menu')
 
                 sensor_choice = int(input('Please enter command number:'))
@@ -395,6 +415,60 @@ def print_choices():
                 if sensor_choice == 0:
                     break
 
+        if choice == 6:
+            while True:
+                print("(-) 1 to check door based on weather and fix status for once")
+                print('(-) 2 same as 1 but for infinity')
+                print('(-) 0 to main menu')
+                func_choice = int(input('Please enter command number:'))
+                if func_choice == 1:
+                    doors_based_on_weather()
+                if func_choice == 2:
+                    while True:
+                        doors_based_on_weather()
+                        print("cooling down 10s")
+                        time.sleep(10)
+               # if func_choice == 2:
+               # if func_choice == 3:
+                if func_choice == 0:
+                    break
+
+        if choice == 7:
+            while True:
+                if plant.profile:  
+                    cur_profile_loop = plant.profile.get_profile()
+                else:
+                    cur_profile_loop = None
+                print('Current profile: ', cur_profile_loop)
+                print("(-) 1 Change profile")
+                print("(-) 2 Delete profile")
+                print('(-) 3 Change fix doors')
+                print('(-) 0 To main menu')
+                profile_choice = int(input('Please enter command number:'))
+                if profile_choice == 1: 
+                    dummy_profile = {}
+                    dummy_profile['light'] = int(input("Enter wanted light:"))
+                    dummy_profile['heatMin'] = int(input("Enter wanted heat min:"))
+                    dummy_profile['heatMax'] = int(input("Enter wanted heat max:"))
+                    dummy_profile['moistMin'] = int(input("Enter wanted moist min:"))
+                    dummy_profile['moistMax'] = int(input("Enter wanted moist max:"))
+                    dummy_profile['location'] = input("Enter wanted location:")
+                    dummy_profile['fix_doors'] = int(input("Enter wanted fix_doors:"))
+                    set_profile(dummy_profile)
+                if profile_choice == 2:
+                    print('Deleting profile...')
+                    db.delete_profile()
+                    plant.profile = None
+                    print('Profile has been deleted')
+                if profile_choice == 3:
+                    if cur_profile_loop is None:
+                        print('Profile not set yet, cant change fix door state')
+                    else:
+                        fix_doors_state = int(input('Enter fix door state(0/1):'))
+                        cur_profile_loop['fix_doors'] = fix_doors_state
+                        set_profile(cur_profile_loop)
+                if profile_choice == 0:
+                    break
         if choice == 0:
             program_ended()
             sys.exit()

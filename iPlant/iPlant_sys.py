@@ -2,13 +2,15 @@ from Hardware import Heat, Light, Moist, Rain, WaterLvl, Pump, Doors
 from . import profile
 import time
 
-
 class IPlantSys:
     profile = None
     num_of_forced_pumps = 2
 
-    def __init__(self, mac, arg_config):
+    def __init__(self, mac, arg_config, db):
         print('Current config: ', arg_config)
+        sensor_record = self.get_sensors_status()
+        db.insert_sensors_log()
+
         self.mac = mac
         self.light = Light.Light(arg_config[1])
         self.water_lvl = WaterLvl.WaterLvl(arg_config[2])
@@ -16,7 +18,7 @@ class IPlantSys:
         self.heat = Heat.Heat(arg_config[4])
         self.rain = Rain.Rain(arg_config[5])
         self.pump = Pump.Pump(arg_config[6])
-        self.doors = Doors.Doors(arg_config[7], arg_config[8], False)
+        self.doors = Doors.Doors(arg_config[7], arg_config[8], sensor_record['doors'])
 
     def set_pins_config(self, arg_config):
         self.light = Light.Light(arg_config[1])
@@ -51,7 +53,7 @@ class IPlantSys:
             'heat': self.heat.get_status(),
             'light': self.light.get_status(),
             'moist': self.moist.get_status(),
-            'water_lvl': self.water_lvl.get_status(),
+            'water_lvl': self.water_lvl.get_water_lvl(),
             'doors': self.doors.isDoorsOpen()
         }
         return arr_sensors
@@ -110,7 +112,7 @@ class IPlantSys:
         return True
 
     #Finished Sts
-    def check_water_level(self):
+    def check_water_lvl(self):
         return self.water_lvl.get_water_lvl()
 
     #Finished Sts
