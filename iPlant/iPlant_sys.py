@@ -6,10 +6,8 @@ class IPlantSys:
     profile = None
     num_of_forced_pumps = 2
 
-    def __init__(self, mac, arg_config, db):
+    def __init__(self, mac, arg_config):
         print('Current config: ', arg_config)
-        sensor_record = self.get_sensors_status()
-        db.insert_sensors_log()
 
         self.mac = mac
         self.light = Light.Light(arg_config[1])
@@ -18,7 +16,7 @@ class IPlantSys:
         self.heat = Heat.Heat(arg_config[4])
         self.rain = Rain.Rain(arg_config[5])
         self.pump = Pump.Pump(arg_config[6])
-        self.doors = Doors.Doors(arg_config[7], arg_config[8], sensor_record['doors'])
+        self.doors = Doors.Doors(arg_config[7], arg_config[8], False)
 
     def set_pins_config(self, arg_config):
         self.light = Light.Light(arg_config[1])

@@ -4,6 +4,8 @@ import Adafruit_ADS1x15
 
 class WaterLvl:
     pin_num = None
+    crit_water_lvl = 10
+
     try:
         adc = Adafruit_ADS1x15.ADS1115()
     except Exception as err:
@@ -25,5 +27,12 @@ class WaterLvl:
         except Exception as err:
             return 0
 
-    def get_real_water_lvl(selfs):
+    def is_enough_water(self):
+        water_lvl = self.get_water_lvl()
+        if water_lvl >= self.crit_water_lvl:
+            return True
+        else:
+            return False
+   
+    def get_real_water_lvl(self):
         return randint(0, 100)

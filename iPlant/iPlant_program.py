@@ -11,12 +11,14 @@ db = {}
 heat_sample = {}
 server_timeout = 0.5
 main_loop_time = 3
+
 def start_program():
     program_starter()
 
     global db
     global plant
-
+    
+    interrupt_flag = False
     db = DB.PiDB()
     pi_config = db.get_config()
 
@@ -24,7 +26,13 @@ def start_program():
         print('Please enter Pi pins config')
         pi_config = config_device()
 
-    plant = iPlant_sys.IPlantSys(utility.get_mac(), pi_config, db)
+    plant = iPlant_sys.IPlantSys(utility.get_mac(), pi_config)
+    last_sensor_log = db.get_last_sensors_log()
+    print('Last sensor log: ', last_sensor_log)
+
+    if last_sensor_log is not None and last_sensor_log[5] is not None:
+        print('Door status has been changed to last sensor record: ', last_sensor_log[5])
+        plant.doors.is_open = last_sensor_log[5]
 
     print('Device mac address: ', utility.get_mac())
     profile = get_profile_from_db()
@@ -38,23 +46,29 @@ def start_program():
     run_time = 0
     run_choice = print_choices()
     print("-------------------Main loop started:------------------------------------ ")
-    while run_time != int(run_choice):
-        print("--------------------------------------", run_time, '--------------------------------------')
+    try:
+        while run_time != int(run_choice):
+            print("--------------------------------------", run_time, '--------------------------------------')
 
-        # -----------------------------
-        get_cmd_to_do()            # getting commands to do from server
-        if plant.profile is not None:
-            doors_based_on_weather()  # closing doors if raining
-            check_water_lvl()         # checking if water lvl is normal, else sending report to server
-            check_if_to_water()       # checking if the plant need water, and water it if the water lvl high enough
-            check_if_whole_hour()     # checking if whole hour, if so then sending sensors status to server
-        # -----------------------------
+            # -----------------------------
+            get_cmd_to_do()            # getting commands to do from server
+            if plant.profile is not None:
+                doors_based_on_weather()  # closing doors if raining
+                check_water_lvl()         # checking if water lvl is normal, else sending report to server
+                check_if_to_water()       # checking if the plant need water, and water it if the water lvl high enough
+                check_if_whole_hour()     # checking if whole hour, if so then sending sensors status to server
+            # -----------------------------
 
-        run_time += 1
-        print('Sleeping ',main_loop_time,' seconds...')
-        time.sleep(main_loop_time)
+            run_time += 1
+            print('Sleeping ',main_loop_time,' seconds...')
+            time.sleep(main_loop_time)
 
-    program_ended()
+    except KeyboardInterrupt:
+            interrupt_flag = True
+            program_ended()
+
+    if not interrupt_flag:
+        program_ended()
 
 
 # Finished
@@ -110,8 +124,14 @@ def send_sensors_status():
 
     return True
 
+
+# Finished
 def activate_doors():
     plant.doors.doors()
+    last_sensor_record = plant.get_sensors_status()
+    db.insert_sensors_log(last_sensor_record)
+
+
 # Finished
 def change_profile():
     answer = get_profile_from_server()
@@ -229,7 +249,10 @@ def send_reminders_to_server(water_lvl):
 def check_if_to_water():
     num_of_pumps = 0
     print("Checking if need to water the plant:")
-    if plant.check_if_need_water():
+    need_to_water = plant.check_if_need_water()
+    enough_water = plant.water_lvl.is_enough_water()
+
+    if need_to_water and enough_water:
 
         send_start_water_session()
         pump_amount = plant.water_now()
@@ -239,6 +262,8 @@ def check_if_to_water():
             print('Watering session ended, watered for - ', pump_amount)
             db.insert_water(pump_amount)
             send_water_log(pump_amount)
+    elif need_to_water and not enough_water:
+        print('Need to water but not enough water in reservoir')
     else:
         print("No need to water the plant for now.")
 
@@ -262,10 +287,10 @@ def doors_based_on_weather():
 
     profile_max_heat = plant.profile.heatMax
     profile_min_heat = plant.profile.heatMin
-    print("checking for heat....")
+    print("Checking heat....")
     current_heat = plant.check_heat()
     print(current_heat," ..done")
-    print("checking for rain...")
+    print("Checking rain...")
     rain_status = plant.check_rain()
     print(rain_status," ..done")
     doors_status = plant.doors.isDoorsOpen()
@@ -274,6 +299,9 @@ def doors_based_on_weather():
     if rain_status and doors_status:  # if rainy & doors open
         print('Rainy outside, closing doors...')
         plant.doors.doors()
+        last_sensor_record = plant.get_sensors_status()
+        db.insert_sensors_log(last_sensor_record)
+
    # elif not rain_status:
        # optimal_door_status = check_better_state()
        # if doors_status != optimal_door_status:
@@ -281,10 +309,17 @@ def doors_based_on_weather():
     elif current_heat - 2 > profile_max_heat and not doors_status:  # if hot and door closed
         print('Opening doors, too hot , current heat: ', current_heat,'(-2) max heat: ', profile_max_heat)
         plant.doors.doors()
+        last_sensor_record = plant.get_sensors_status()
+        db.insert_sensors_log(last_sensor_record)
+
     elif current_heat + 2 < profile_min_heat and doors_status:  # if cold and opened doors
         print('Opening doors,too cold ,  current heat ', current_heat, '(+2) min heat: ', profile_min_heat)
         plant.doors.doors()
+        last_sensor_record = plant.get_sensors_status()
+        db.insert_sensors_log(last_sensor_record)
 
+
+# ToDo: on progress
 def check_better_state():
     current_heat = plant.check_heat()
     logged_heat = None 
@@ -372,6 +407,8 @@ def print_choices():
                 door_choice = int(input('Please enter command number:'))
                 if door_choice == 1:
                     plant.doors.doors()
+                    last_sensor_record = plant.get_sensors_status()
+                    db.insert_sensors_log(last_sensor_record)
                 if door_choice == 2:
                     while True:
                         print('(--) Door calibrations:')
