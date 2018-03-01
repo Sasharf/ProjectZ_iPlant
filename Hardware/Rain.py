@@ -5,6 +5,7 @@ import RPi.GPIO as GPIO
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
+
 class Rain:
     pin_num = None
     sleep_time = 0.2
@@ -13,10 +14,10 @@ class Rain:
         self.pin_num = int(pin)
         GPIO.setup(self.pin_num, GPIO.IN)
 
-    def get_real_status(self):
+    def get_status(self):
         return randint(0, 1000)
 
-    def get_status(self):
+    def get_real_status(self):
         drop_counter = 0
         try:
             for i in range(0, 10):  # 3 out of 10 checks found water drops

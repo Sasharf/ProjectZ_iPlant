@@ -37,7 +37,7 @@ class PiDB:
             self.c.execute("INSERT INTO sensors_log values (:prob_date,:light,:heat,:moist,:water_lvl,:doors)",
                            {'prob_date': time.time(), 'light': light, 'heat': heat, 'moist': moist, 'water_lvl': water_lvl, 'doors':doors})
 
-    def get_last_sensors_log(self):
+    def get_sensors_log(self):
         self.c.execute("""SELECT * 
                           FROM sensors_log 
                           WHERE prob_date = (SELECT MAX(prob_date) FROM sensors_log)
@@ -50,6 +50,32 @@ class PiDB:
                           ORDER BY prob_date desc
                       """)
         return self.c.fetchmany(arg)
+
+    # ............................LAST-SENSOR-LOG...............................................................
+    # ................................................................................................
+
+    def insert_last_sensors_log(self, data):
+        light = data['light']
+        heat = data['heat']
+        moist = data['moist']
+        water_lvl = data['water_lvl']
+        doors = data['doors']
+
+        with self.conn:
+            self.c.execute("INSERT INTO last_sensors_log values (:prob_date,:light,:heat,:moist,:water_lvl,:doors)",
+                           {'prob_date': time.time(), 'light': light, 'heat': heat, 'moist': moist,
+                            'water_lvl': water_lvl, 'doors': doors})
+
+    def get_last_sensors_log(self):
+        self.c.execute("""SELECT * 
+                          FROM last_sensors_log 
+                          WHERE prob_date = (SELECT MAX(prob_date) FROM last_sensors_log)
+                      """)
+        return self.c.fetchone()
+
+    def remove_last_sensors_log(self):
+        with self.conn:
+            self.c.execute("DELETE FROM last_sensors_log")
 
     # ..............................PROFILE...........................................................
     # ................................................................................................
@@ -66,6 +92,7 @@ class PiDB:
                             'location': arg_profile['location'],
                             'fix_doors': arg_profile['fix_doors']
                             })
+
     def delete_profile(self):
         with self.conn:
             self.c.execute("DELETE FROM profile WHERE name = 'profile'")
@@ -154,6 +181,7 @@ class PiDB:
                               WHERE name='config';
                           """, (arg_light, arg_water_lvl, arg_moist, arg_heat, arg_rain, arg_pump, arg_door_left, arg_door_right))
 
+    # .............................DB-CREATION........................................................
     # ................................................................................................
 
     def create_db(self):
@@ -174,6 +202,14 @@ class PiDB:
                                 fix_doors boolean
                             )""")
             self.c.execute("""CREATE TABLE sensors_log(
+                                prob_date text primary key,
+                                light INTEGER,
+                                heat INTEGER,
+                                moist INTEGER,
+                                water_lvl INTEGER,
+                                doors boolean
+                            )""")
+            self.c.execute("""CREATE TABLE last_sensors_log(
                                 prob_date text primary key,
                                 light INTEGER,
                                 heat INTEGER,

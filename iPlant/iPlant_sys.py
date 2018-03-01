@@ -2,6 +2,7 @@ from Hardware import Heat, Light, Moist, Rain, WaterLvl, Pump, Doors
 from . import profile
 import time
 
+
 class IPlantSys:
     profile = None
     num_of_forced_pumps = 2
@@ -46,13 +47,15 @@ class IPlantSys:
 
     # TODO: Not finished, change get_status to get_real_status
     def get_sensors_status(self):
+        print('Checking current sensors status...')
         arr_sensors = {
             'mac': self.mac,
-            'heat': self.heat.get_status(),
-            'light': self.light.get_status(),
-            'moist': self.moist.get_status(),
-            'water_lvl': self.water_lvl.get_water_lvl(),
-            'doors': self.doors.isDoorsOpen()
+            'heat': self.check_heat(),
+            'light': self.check_light(),
+            'moist': self.check_moist(),
+            'water_lvl': self.check_water_lvl(),
+            'doors': self.check_doors(),
+            'rain': self.check_rain()
         }
         return arr_sensors
 
@@ -72,18 +75,32 @@ class IPlantSys:
     def check_light(self):
         return self.light.get_status()
 
+    # Finished Sts
+    def check_moist(self):
+        return self.moist.get_status()
+
+    # Finished Sts
+    def check_water_lvl(self):
+        return self.water_lvl.get_water_lvl()
+
+    # Finished Sts
+    def check_doors(self):
+        return self.doors.isDoorsOpen()
+
+    def check_if_enough_water_lvl(self):
+        return self.water_lvl.is_enough_water()
+
     # TODO: Started - need to finish
     def water_now(self):
         water_lvl = self.water_lvl.get_water_lvl()
         somenumber = 0
         num_of_pumps = 0
         curMoist = self.moist.get_status()
-        # curMoist = 57
+
         print("Watering in progress!")
         while self.profile.moistMin >= curMoist and water_lvl > somenumber:
             self.pump.pump_now()
             num_of_pumps = num_of_pumps + 1
-            # curMoist = curMoist - 1
             print('Pump number - ', num_of_pumps)
             time.sleep(5)
             water_lvl = self.water_lvl.get_water_lvl()
@@ -103,19 +120,11 @@ class IPlantSys:
     # TODO: Started - need to do
     def check_if_need_water(self):
         curMoist = self.moist.get_status()
-        print('Current moist: ', curMoist, '| Self profile moistMin: ', self.profile.moistMin)
+        print('Current moist: ', curMoist, '| Profile moistMin: ', self.profile.moistMin)
 
         if self.profile.moistMin <= curMoist:
             return False
         return True
-
-    #Finished Sts
-    def check_water_lvl(self):
-        return self.water_lvl.get_water_lvl()
-
-    #Finished Sts
-    def check_moist(self):
-        return self.moist.get_status()
 
     # Finished Sts
     def check_fix_door(self):

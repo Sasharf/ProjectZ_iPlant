@@ -8,7 +8,7 @@ class Heat:
     def __init__(self, pin):
         self.pin_num = int(pin)
 
-    def get_status(self):
+    def get_real_status(self):
         try:
             humidity, temperature = Adafruit_DHT.read_retry(11, self.pin_num)
             # print('Temp: {0:0.1f} C  Humidity: {1:0.1f} %'.format)
@@ -16,7 +16,7 @@ class Heat:
         except Exception as err:
             return 0
 
-    def get_real_status(self):
+    def get_status(self):
         return randint(0, 100)
 
 

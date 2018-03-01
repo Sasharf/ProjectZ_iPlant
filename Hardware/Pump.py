@@ -13,6 +13,7 @@ class Pump:
     def __init__(self, pin):
         self.pin_num = int(pin)
         GPIO.setup(self.pin_num, GPIO.OUT)
+        GPIO.output(self.pin_num, GPIO.HIGH)
 
     def get_status(self):
         return randint(0, 1000)
