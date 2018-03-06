@@ -11,6 +11,8 @@ class Profile:
         self.moistMax = profile[5]
         self.location = profile[6]
         self.fix_doors = profile[7]
+        self.fix_lamp = profile[8]
+        self.fix_pump = profile[9]
 
     def get_profile(self):
         profile = {}
@@ -21,5 +23,7 @@ class Profile:
         profile['moistMax'] = self.moistMax
         profile['location'] = self.location
         profile['fix_doors'] = self.fix_doors
+        profile['fix_lamp'] = self.fix_lamp
+        profile['fix_pump'] = self.fix_pump
 
         return profile

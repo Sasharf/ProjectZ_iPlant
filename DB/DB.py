@@ -32,10 +32,12 @@ class PiDB:
         moist = data['moist']
         water_lvl = data['water_lvl']
         doors = data['doors']
+        lamp = data['lamp']
 
         with self.conn:
-            self.c.execute("INSERT INTO sensors_log values (:prob_date,:light,:heat,:moist,:water_lvl,:doors)",
-                           {'prob_date': time.time(), 'light': light, 'heat': heat, 'moist': moist, 'water_lvl': water_lvl, 'doors':doors})
+            self.c.execute("INSERT INTO sensors_log values (:prob_date,:light,:heat,:moist,:water_lvl,:doors,:lamp)",
+                           {'prob_date': time.time(), 'light': light, 'heat': heat, 'moist': moist,
+                            'water_lvl': water_lvl, 'doors': doors, 'lamp': lamp})
 
     def get_sensors_log(self):
         self.c.execute("""SELECT * 
@@ -60,11 +62,12 @@ class PiDB:
         moist = data['moist']
         water_lvl = data['water_lvl']
         doors = data['doors']
+        lamp = data['lamp']
 
         with self.conn:
-            self.c.execute("INSERT INTO last_sensors_log values (:prob_date,:light,:heat,:moist,:water_lvl,:doors)",
+            self.c.execute("INSERT INTO last_sensors_log values (:prob_date,:light,:heat,:moist,:water_lvl,:doors,:lamp)",
                            {'prob_date': time.time(), 'light': light, 'heat': heat, 'moist': moist,
-                            'water_lvl': water_lvl, 'doors': doors})
+                            'water_lvl': water_lvl, 'doors': doors, 'lamp': lamp})
 
     def get_last_sensors_log(self):
         self.c.execute("""SELECT * 
@@ -82,7 +85,8 @@ class PiDB:
 
     def set_profile(self, arg_profile):
         with self.conn:
-            self.c.execute("INSERT INTO profile values (:name,:light,:heatMin,:heatMax,:moistMin,:moistMax,:location,:fix_doors)",
+            self.c.execute("INSERT INTO profile values (:name,:light,:heatMin,:heatMax,:moistMin,:moistMax,:location,"
+                           ":fix_doors,:fix_lamp,:fix_pump)",
                            {'name': 'profile',
                             'light': arg_profile['light'],
                             'heatMin': arg_profile['heatMin'],
@@ -90,7 +94,9 @@ class PiDB:
                             'moistMin': arg_profile['moistMin'],
                             'moistMax': arg_profile['moistMax'],
                             'location': arg_profile['location'],
-                            'fix_doors': arg_profile['fix_doors']
+                            'fix_doors': arg_profile['fix_doors'],
+                            'fix_lamp': arg_profile['fix_lamp'],
+                            'fix_pump': arg_profile['fix_pump']
                             })
 
     def delete_profile(self):
@@ -112,12 +118,15 @@ class PiDB:
             arg_moistMax = arg_profile['moistMax']
             arg_location = arg_profile['location']
             arg_fix_doors = arg_profile['fix_doors']
+            arg_fix_lamp = arg_profile['fix_lamp']
+            arg_fix_pump = arg_profile['fix_pump']
 
             self.c.execute("""UPDATE profile
                               SET light = ?, heatMin = ?, heatMax = ?,
-                                  moistMin = ?, moistMax = ?, location = ?, fix_doors = ?
+                                  moistMin = ?, moistMax = ?, location = ?, fix_doors = ?, fix_lamp = ?, fix_pump = ?
                               WHERE name='profile';
-                          """, (arg_light, arg_heatMin, arg_heatMax, arg_moistMin, arg_moistMax, arg_location, arg_fix_doors))
+                          """, (arg_light, arg_heatMin, arg_heatMax, arg_moistMin, arg_moistMax, arg_location,
+                                arg_fix_doors, arg_fix_lamp, arg_fix_pump))
 
     # ..............................WATERING............................................................
     # ................................................................................................
@@ -146,7 +155,8 @@ class PiDB:
 
     def set_config(self, arg_config):
         with self.conn:
-            self.c.execute("INSERT INTO pi_config values (:name,:light,:water_lvl,:moist,:heat,:rain,:pump,:door_left,:door_right)",
+            self.c.execute("INSERT INTO pi_config values (:name,:light,:water_lvl,:moist,:heat,:rain,:pump,:lamp,"
+                           ":door_left,:door_right)",
                            {'name': 'config',
                             'light': arg_config[1],
                             'water_lvl': arg_config[2],
@@ -154,8 +164,9 @@ class PiDB:
                             'heat': arg_config[4],
                             'rain': arg_config[5],
                             'pump': arg_config[6],
-                            'door_left': arg_config[7],
-                            'door_right': arg_config[8]
+                            'lamp': arg_config[7],
+                            'door_left': arg_config[8],
+                            'door_right': arg_config[9]
                             })
 
     def get_config(self):
@@ -172,14 +183,16 @@ class PiDB:
             arg_heat = arg_config[4]
             arg_rain = arg_config[5]
             arg_pump = arg_config[6]
-            arg_door_left = arg_config[7]
-            arg_door_right = arg_config[8]
+            arg_lamp = arg_config[7]
+            arg_door_left = arg_config[8]
+            arg_door_right = arg_config[9]
 
             self.c.execute("""UPDATE pi_config
                               SET light = ?, moist = ?, water_lvl = ?, heat = ?,
-                                  rain = ?, pump = ?, door_left = ?, door_right = ?
+                                  rain = ?, pump = ?, lamp = ?, door_left = ?, door_right = ?
                               WHERE name='config';
-                          """, (arg_light, arg_water_lvl, arg_moist, arg_heat, arg_rain, arg_pump, arg_door_left, arg_door_right))
+                          """, (arg_light, arg_water_lvl, arg_moist, arg_heat, arg_rain, arg_pump, arg_lamp,
+                                arg_door_left, arg_door_right))
 
     # .............................DB-CREATION........................................................
     # ................................................................................................
@@ -193,13 +206,15 @@ class PiDB:
 
             self.c.execute("""CREATE TABLE profile(
                                 name text primary key,
-                                light INTEGER,
+                                light text,
                                 heatMin INTEGER,
                                 heatMax INTEGER,
                                 moistMin INTEGER,
                                 moistMax INTEGER,
                                 location text,
-                                fix_doors boolean
+                                fix_doors boolean,
+                                fix_lamp boolean,
+                                fix_pump boolean
                             )""")
             self.c.execute("""CREATE TABLE sensors_log(
                                 prob_date text primary key,
@@ -207,7 +222,8 @@ class PiDB:
                                 heat INTEGER,
                                 moist INTEGER,
                                 water_lvl INTEGER,
-                                doors boolean
+                                doors boolean,
+                                lamp boolean
                             )""")
             self.c.execute("""CREATE TABLE last_sensors_log(
                                 prob_date text primary key,
@@ -215,7 +231,8 @@ class PiDB:
                                 heat INTEGER,
                                 moist INTEGER,
                                 water_lvl INTEGER,
-                                doors boolean
+                                doors boolean,
+                                lamp boolean
                             )""")
             self.c.execute("""CREATE TABLE water(
                                 wateredTime text primary key,
@@ -229,6 +246,7 @@ class PiDB:
                                 heat INTEGER,
                                 rain INTEGER,
                                 pump INTEGER,
+                                lamp INTEGER,
                                 door_left text,
                                 door_right text
                          )""")

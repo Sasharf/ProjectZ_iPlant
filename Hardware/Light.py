@@ -24,5 +24,17 @@ class Light:
         except Exception as err:
             return 0
 
+    def convert_to_string(self, arg_val):
+        light_val = int(arg_val)
+        print(arg_val)
+        if 90 <= light_val <= 100:
+            return 'Full sun'
+        elif 75 <= light_val <= 89:
+            return 'Partial sun'
+        elif 30 <= light_val <= 74:
+            return 'Shady'
+        elif 0 <= light_val <= 29:
+            return 'Full Shade'
+
     def get_real_status(self):
         return randint(0, 100)

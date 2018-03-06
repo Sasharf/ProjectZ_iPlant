@@ -4,13 +4,16 @@ from . import iPlant_sys, utility
 from DB import DB
 import time
 import sys
+import math
+import datetime
 
 url = 'http://localhost:3000/'
 plant = {}
 db = {}
-heat_sample = {}
+heat_sample = None
 server_timeout = 0.5
 main_loop_time = 3
+run_time = 0
 
 
 def start_program():
@@ -18,7 +21,8 @@ def start_program():
 
     global db
     global plant
-    
+    global run_time
+
     interrupt_flag = False
     db = DB.PiDB()
     pi_config = db.get_config()
@@ -44,12 +48,11 @@ def start_program():
         print('Profile:  Not set yet')
         change_profile()
 
-    run_time = 0
     run_choice = print_choices()
-    print("-------------------Main loop started:------------------------------------ ")
+    print("------------------------------------Main loop started:-------------------------------- ")
     try:
         while run_time != int(run_choice):
-            print("--------------------------------------", run_time, '--------------------------------------')
+            print("-------------------------------------------", run_time, '----------------------------------------')
 
             # -----------------------------
             get_cmd_to_do()                             # getting commands to do from server
@@ -57,6 +60,7 @@ def start_program():
                 sensors_status = do_sensor_check()      # Doing sensor check and saving it
                 doors_based_on_weather(sensors_status)  # closing doors if raining/to hot
                 check_if_to_water()                     # checking if the plant need water, and water it if the water lvl high enough
+                check_if_grow_lamp_req(sensors_status['light'])
             # -----------------------------
 
             run_time += 1
@@ -86,37 +90,42 @@ def get_cmd_to_do():
 
     if answer['success']:
         print("There are commands to execute!")
-        print(answer['answer'])
         do_commands(answer['answer'])
 
     else:
         print("No commands to execute!")
 
 
+# Finished
 def print_commands(commands):
     str_commands = ""
     for cmd in commands:
         str_commands += cmd['command']+', '
 
+    print('// Commands: ', str_commands)
 
-# TODO: Not finished - depends on what commands we will have
+
+# Finished
 def do_commands(arg_commands):
-    print('-' * 20)
+    print('/' * 70)
     print_commands(arg_commands)
-    print('|', '-' * 18, '|')
+    print('//', '-' * 67)
     for cmd in arg_commands:
-        print("Doing command:", cmd['command'])
+        print("// Doing command:", cmd['command'])
         if cmd['command'] == "init_device" and os.path.exists('piDB'):
             init_db()
         elif cmd['command'] == "set_profile":
             change_profile()
         elif cmd['command'] == "activate_doors":
             activate_doors()
-        # elif cmd['command'] == "get_sensors_status":
-        #     send_sensors_status()
+        elif cmd['command'] == "activate_lamp":
+            change_lamp_status()
         elif cmd['command'] == "water_now":
-            water_now()
-        print('|', '-' * 18, '|')
+            water_now_forced()
+        print('//', '-' * 67)
+
+    print('// Finished executing commands')
+    print('/' * 70)
     return True
 
 
@@ -141,18 +150,41 @@ def save_sensors_log(sensors_log):
     db.insert_last_sensors_log(sensors_log)
 
 
-# ToDO: in progress
+# Finished
+def print_sensors_log(sensors_log):
+    arr_sensors = [
+        sensors_log['light'],
+        sensors_log['moist'],
+        sensors_log['heat'],
+        sensors_log['water_lvl'],
+        sensors_log['doors'],
+        sensors_log['rain'],
+        sensors_log['lamp']
+    ]
+    cur_time = time.strftime("%H:%M:%S", time.localtime())
+
+    print('Current sensors status:')
+    print('-' * 97)
+    print('|   Time   |   Light   |   Moist   |   Heat   |   Water lvl   |   Doors   |   Rain   |   lamp   |')
+    print('-' * 97)
+    print('|', cur_time, '| {0:>8}% | {1:>8}% | {2:>7}C | {3:>12}% | {4:>9} | {5:>8} | {6:>8} |'.format(*arr_sensors))
+    print('-' * 97)
+
+
+# Finished
 def send_sensors_log(sensors_log):
-    whole_hour = check_if_whole_hour()
-    if whole_hour:
-        print("Whole hour, saving log...")
+    to_save = check_if_whole_hour()
+    if to_save:
+        print("Timed save, saving log...")
         save_whole_hour_log(sensors_log)
 
     print('Sending sensor log to server...')
 
-    sensors_log['whole_hour'] = whole_hour
+    send_log = dict(sensors_log)
+    send_log['light'] = plant.light.convert_to_string(sensors_log['light'])
+    send_log['whole_hour'] = to_save
     try:
-        resp = requests.post(url+'lastSensorRecords/add', timeout=server_timeout, json=sensors_log)
+        resp = requests.post(url+'lastSensorRecords/add', timeout=server_timeout, json=send_log)
         answer = resp.json()
 
         print("Server got answer? --> ", answer['success'])
@@ -160,25 +192,6 @@ def send_sensors_log(sensors_log):
         print("Cant reach server")
 
     return True
-
-
-# Finished
-def print_sensors_log(sensors_log):
-    arr_sensors = []
-    arr_sensors.append(sensors_log['light'])
-    arr_sensors.append(sensors_log['heat'])
-    arr_sensors.append(sensors_log['moist'])
-    arr_sensors.append(sensors_log['water_lvl'])
-    arr_sensors.append(sensors_log['doors'])
-    arr_sensors.append(sensors_log['rain'])
-    cur_time = time.strftime("%H:%M:%S", time.localtime())
-
-    print('Current sensors status:')
-    print('-' * 86)
-    print('|   Time   |   Light   |   Moist   |   Heat   |   Water lvl   |   Doors   |   Rain   |')
-    print('-' * 86)
-    print('|', cur_time, '| {0:>9} | {1:>9} | {2:>8} | {3:>13} | {4:>9} | {5:>8} |'.format(*arr_sensors))
-    print('-' * 86)
 
 
 # Finished
@@ -196,10 +209,33 @@ def save_whole_hour_log(sensors_log):
 
 
 # Finished
+def change_lamp_status():
+    if plant.lamp.is_on:
+        plant.lamp.lamp_off()
+    else:
+        plant.lamp.lamp_on()
+
+
+# TODO: stss in progress
+def check_if_grow_lamp_req(cur_light):
+    cur_time = datetime.datetime.now()
+    print('Checking if lamp needed...')
+    if 19 < cur_time.hour < 7:
+        plant.lamp.lamp_off()
+    else:
+        if plant.profile.light == 'Full sun' and cur_light < 90:
+            plant.lamp.lamp_on()
+        elif plant.profile.light == 'Partial sun' and cur_light < 75:
+            plant.lamp.lamp_on()
+        elif plant.profile.light == 'Shady' and cur_light < 50:
+            plant.lamp.lamp_on()
+        else:
+            plant.lamp.lamp_off()
+
+
+# Finished
 def activate_doors():
     plant.doors.doors()
-    last_sensor_record = plant.get_sensors_status()
-    db.insert_sensors_log(last_sensor_record)
 
 
 # Finished
@@ -240,6 +276,9 @@ def get_profile_from_db():
 def set_profile(profile):
     print('Setting profile: ')
     print(profile)
+    global heat_sample
+    heat_sample = None
+
     if plant.profile is None:
         db.set_profile(profile)
         print('New profile been set')
@@ -266,13 +305,14 @@ def config_device():
     pi_config = []
     pi_config.append("Stss")
     pi_config.append(input("Enter light sensor pin number(In adc): "))
-    pi_config.append(input("Enter water_lvl sensor pin number(adc): "))
+    pi_config.append(input("Enter water_lvl sensor pin number(In adc): "))
     pi_config.append(input("Enter moist sensor pin number(In adc): "))
     pi_config.append(input("Enter heat sensor pin number: "))
     pi_config.append(input("Enter rain sensor pin number: "))
-    pi_config.append(input("Enter pump sensor pin number: "))
-    pi_config.append(input("Enter door_left sensor pin number: "))
-    pi_config.append(input("Enter door_right sensor pin number: "))
+    pi_config.append(input("Enter pump pin number: "))
+    pi_config.append(input("Enter lamp pin number: "))
+    pi_config.append(input("Enter door_left motor pin number: "))
+    pi_config.append(input("Enter door_right motor pin number: "))
 
     config = db.get_config()
 
@@ -289,9 +329,17 @@ def set_config(pi_config):
     plant.set_pins_config(pi_config)
 
 
-# TODO: Started - need to finish
+# Finished
 def check_if_to_water():
+    if plant.check_fix_pump():
+        print("Pump fixed, doing nothing")
+        return
+
     print("Checking if need to water the plant:")
+    if time_between_watering() < 60*5:
+        print('To early to check...')
+        return
+
     need_to_water = plant.check_if_need_water()
     enough_water = plant.check_if_enough_water_lvl()
 
@@ -312,7 +360,20 @@ def check_if_to_water():
 
 
 # Finished
-def water_now():
+def time_between_watering():
+    cur_time = time.time()
+    water_session = db.get_last_waterTime()
+    if water_session is None:
+        return 999999
+
+    last_time = water_session[0]
+    diff = cur_time - last_time
+
+    return diff
+
+
+# Finished
+def water_now_forced():
     send_start_water_session()
     pump_amount = plant.water_now()
     send_end_water_session()
@@ -324,7 +385,7 @@ def water_now():
 
 # Finished Sts
 def doors_based_on_weather(sensors_status):
-    if plant.check_fix_door():  # if fixed doors enabled
+    if plant.check_fix_door():
         print("Doors fixed, doing nothing ;)")
         return
 
@@ -335,24 +396,70 @@ def doors_based_on_weather(sensors_status):
     rain_status = sensors_status['rain']
     doors_status = sensors_status['doors']
 
-    if rain_status and doors_status:  # if rainy & doors open
+    if rain_status and not doors_status:
+        print('Rainy outside and it seems that the doors are closed, doing nothing')
+        return
+
+    if rain_status and doors_status:
         print('Rainy outside, closing doors...')
+        global heat_sample
+        heat_sample = None
+
         plant.doors.doors()
 
     elif current_heat - 2 > profile_max_heat and not doors_status:  # if hot and door closed
-        print('Opening doors, too hot , current heat: ', current_heat,'(-2) max heat: ', profile_max_heat)
-        plant.doors.doors()
+        print('Too hot, current heat: ', current_heat, ' profile max heat: ', profile_max_heat,
+              ' ,checking better state...')
+        new_door_state = check_better_state(current_heat, profile_max_heat, doors_status, 'hot')
+        if new_door_state != doors_status:
+            plant.doors.doors()
 
     elif current_heat + 2 < profile_min_heat and doors_status:  # if cold and opened doors
-        print('Opening doors,too cold ,  current heat ', current_heat, '(+2) min heat: ', profile_min_heat)
-        plant.doors.doors()
+        print('Too cold, current heat: ', current_heat, ' profile min heat: ', profile_min_heat,
+              ' ,checking better state...')
+        new_door_state = check_better_state(current_heat, profile_min_heat, doors_status, 'cold')
+        if new_door_state != doors_status:
+            plant.doors.doors()
 
 
-# ToDo: in progress
-def check_better_state():
-    current_heat = plant.check_heat()
-    logged_heat = None 
+# TODO: in progress
+def check_better_state(cur_heat, profile_heat, door_state, weather):
+    global heat_sample
+    check_time = 60*5
+    print(heat_sample)
+    if heat_sample is None:
+        heat_sample = {
+            'sample_time': time.time(),
+            'sample_heat': cur_heat,
+            'door_state': door_state
+        }
+        if weather == 'hot':
+            return 1
+        else:
+            return 0
+
     current_time = time.time()
+    time_diff = current_time - heat_sample['sample_time']
+
+    sample_doors_state = heat_sample['door_state']
+    cur_diff = math.fabs(cur_heat - profile_heat)
+    sample_diff = math.fabs(heat_sample['sample_time'] - profile_heat)
+
+    if time_diff < check_time:
+        print('Too early to change... next change in: ', check_time - time_diff, 's')
+        return sample_doors_state
+    else:
+        heat_sample = {
+            'sample_time': current_time,
+            'sample_heat': cur_heat
+        }
+
+        if cur_diff > sample_diff:
+            heat_sample['door_state'] = not sample_doors_state
+            return not sample_doors_state
+        else:
+            heat_sample['door_state'] = sample_doors_state
+            return sample_doors_state
 
 
 # Finished
@@ -399,7 +506,6 @@ def send_water_log(amount):
 # Finished
 def print_choices():
     global plant
-    choice = -1
 
     while True:
         print("Commands:")
@@ -425,9 +531,15 @@ def print_choices():
             pi_config = config_device()
             set_config(pi_config)
         if choice == 3:
-            init_db()
-            pi_config = config_device()
-            set_config(pi_config)
+            while True:
+                init_choice = input('Are you sure? (y/n)')
+
+                if init_choice == 'y':
+                    init_db()
+                    pi_config = config_device()
+                    set_config(pi_config)
+                else:
+                    break
         if choice == 4:
             while True:
                 print("Door status:", plant.doors.isDoorsOpen())
