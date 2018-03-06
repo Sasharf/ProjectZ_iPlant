@@ -35,6 +35,3 @@ class Light:
             return 'Shady'
         elif 0 <= light_val <= 29:
             return 'Full Shade'
-
-    def get_real_status(self):
-        return randint(0, 100)

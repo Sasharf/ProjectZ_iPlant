@@ -23,6 +23,3 @@ class Moist:
 
         except Exception as err:
             return 0
-
-    def get_real_status(self):
-        return randint(0, 100)

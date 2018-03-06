@@ -1,7 +1,7 @@
 import time
-# import RPi.GPIO as GPIO
-# GPIO.setmode(GPIO.BCM)
-# GPIO.setwarnings(False)
+import RPi.GPIO as GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 
 
 class Doors:
@@ -27,13 +27,13 @@ class Doors:
         self.stepPinsR = [int(x) for x in right_door_pins.split(" ")]
         self.is_open = is_open
 
-        # for pin in self.stepPinsR:
-        #     GPIO.setup(pin, GPIO.OUT)
-        #     GPIO.output(pin, False)
-        #
-        # for pin in self.stepPinsL:
-        #     GPIO.setup(pin, GPIO.OUT)
-        #     GPIO.output(pin, False)
+        for pin in self.stepPinsR:
+            GPIO.setup(pin, GPIO.OUT)
+            GPIO.output(pin, False)
+
+        for pin in self.stepPinsL:
+            GPIO.setup(pin, GPIO.OUT)
+            GPIO.output(pin, False)
 
     def isDoorsOpen(self):
         return self.is_open
@@ -46,42 +46,42 @@ class Doors:
         stepCounterR = 0
         loopCounter = door_move_time
 
-        # try:
-        #     while loopCounter > 0:
-        #         loopCounter -= 1
-        #
-        #         for pin in range(0, 4):
-        #             if self.Seq[stepCounterR][pin] != 0:
-        #                 GPIO.output(self.stepPinsR[pin], True)
-        #             else:
-        #                 GPIO.output(self.stepPinsR[pin], False)
-        #
-        #             if self.Seq[stepCounterL][pin] != 0:
-        #                 GPIO.output(self.stepPinsL[pin], True)
-        #             else:
-        #                 GPIO.output(self.stepPinsL[pin], False)
-        #
-        #         stepCounterR += stepDirR
-        #         stepCounterL += stepDirL
-        #
-        #         if stepCounterR >= self.stepCount:
-        #             stepCounterR = 0
-        #         if stepCounterR < 0:
-        #             stepCounterR = self.stepCount + stepDirR
-        #
-        #         if stepCounterL >= self.stepCount:
-        #             stepCounterL = 0
-        #         if stepCounterL < 0:
-        #             stepCounterL = self.stepCount + stepDirL
-        #         time.sleep(0.002)
-        #
-        # except KeyboardInterrupt:
-        #     print('error')
-        # for pin in self.stepPinsR:
-        #     GPIO.output(pin, False)
-        # for pin in self.stepPinsL:
-        #     GPIO.output(pin, False)
-        # return
+        try:
+            while loopCounter > 0:
+                loopCounter -= 1
+
+                for pin in range(0, 4):
+                    if self.Seq[stepCounterR][pin] != 0:
+                        GPIO.output(self.stepPinsR[pin], True)
+                    else:
+                        GPIO.output(self.stepPinsR[pin], False)
+
+                    if self.Seq[stepCounterL][pin] != 0:
+                        GPIO.output(self.stepPinsL[pin], True)
+                    else:
+                        GPIO.output(self.stepPinsL[pin], False)
+
+                stepCounterR += stepDirR
+                stepCounterL += stepDirL
+
+                if stepCounterR >= self.stepCount:
+                    stepCounterR = 0
+                if stepCounterR < 0:
+                    stepCounterR = self.stepCount + stepDirR
+
+                if stepCounterL >= self.stepCount:
+                    stepCounterL = 0
+                if stepCounterL < 0:
+                    stepCounterL = self.stepCount + stepDirL
+                time.sleep(0.002)
+
+        except KeyboardInterrupt:
+            print('error')
+        for pin in self.stepPinsR:
+            GPIO.output(pin, False)
+        for pin in self.stepPinsL:
+            GPIO.output(pin, False)
+        return
 
     def calibrateUp(self):
         self.moveDoors(-1, self.calibrate_time)
