@@ -26,7 +26,6 @@ class Light:
 
     def convert_to_string(self, arg_val):
         light_val = int(arg_val)
-        print(arg_val)
         if 90 <= light_val <= 100:
             return 'Full sun'
         elif 75 <= light_val <= 89:

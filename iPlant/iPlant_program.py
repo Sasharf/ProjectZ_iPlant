@@ -216,14 +216,14 @@ def save_whole_hour_log(sensors_log):
 
 # Finished
 def change_lamp_status():
+    sensors_status = convert_to_dict(db.get_last_sensors_log())
+    sensors_status['lamp'] = not sensors_status['lamp']
+    update_sensors_state(sensors_status)
+
     if plant.lamp.is_on:
         plant.lamp.lamp_off()
     else:
         plant.lamp.lamp_on()
-
-    sensors_status = convert_to_dict(db.get_last_sensors_log())
-    sensors_status['lamp'] = plant.check_lamp()
-    update_sensors_state(sensors_status)
 
 
 # TODO: stss in progress
@@ -255,10 +255,10 @@ def check_if_grow_lamp_req(sensors_status):
 
 # Finished
 def activate_doors():
-    plant.doors.doors()
     sensors_status = convert_to_dict(db.get_last_sensors_log())
-    sensors_status['doors'] = plant.check_doors()
+    sensors_status['doors'] = not sensors_status['doors']
     update_sensors_state(sensors_status)
+    plant.doors.doors()
 
 
 # Finished
@@ -278,7 +278,6 @@ def convert_to_dict(arg_array):
 # Finished
 def change_profile():
     answer = get_profile_from_server()
-    print(answer)
     if answer['success']:
         if answer['device']:
             set_profile(answer['answer'])
