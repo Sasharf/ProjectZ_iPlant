@@ -60,7 +60,7 @@ def start_program():
                 sensors_status = do_sensor_check()      # Doing sensor check and saving it
                 doors_based_on_weather(sensors_status)  # closing doors if raining/to hot
                 check_if_to_water()                     # checking if the plant need water, and water it if the water lvl high enough
-                check_if_grow_lamp_req(sensors_status['light'])
+                check_if_grow_lamp_req(sensors_status)
             # -----------------------------
 
             run_time += 1
@@ -140,6 +140,12 @@ def do_sensor_check():
 
 
 # Finished
+def update_sensors_state(sensors_state):
+    save_sensors_log(sensors_state)
+    send_sensors_log(sensors_state)
+
+
+# Finished
 def get_sensors_log():
     return plant.get_sensors_status()
 
@@ -215,27 +221,58 @@ def change_lamp_status():
     else:
         plant.lamp.lamp_on()
 
+    sensors_status = convert_to_dict(db.get_last_sensors_log())
+    sensors_status['lamp'] = plant.check_lamp()
+    update_sensors_state(sensors_status)
+
 
 # TODO: stss in progress
-def check_if_grow_lamp_req(cur_light):
+def check_if_grow_lamp_req(sensors_status):
+    if plant.check_fix_lamp():
+        print("Lamp fixed, doing nothing ;)")
+        return
+
+    cur_light = sensors_status['light']
     cur_time = datetime.datetime.now()
+    is_lamp_on = plant.check_lamp()
+
     print('Checking if lamp needed...')
-    if 19 < cur_time.hour < 7:
+    if 19 < cur_time.hour < 7 and is_lamp_on:
         plant.lamp.lamp_off()
     else:
-        if plant.profile.light == 'Full sun' and cur_light < 90:
+        if plant.profile.light == 'Full sun' and cur_light < 90 and not is_lamp_on:
             plant.lamp.lamp_on()
-        elif plant.profile.light == 'Partial sun' and cur_light < 75:
+        elif plant.profile.light == 'Partial sun' and cur_light < 75 and not is_lamp_on:
             plant.lamp.lamp_on()
-        elif plant.profile.light == 'Shady' and cur_light < 50:
+        elif plant.profile.light == 'Shady' and cur_light < 50 and not is_lamp_on:
             plant.lamp.lamp_on()
-        else:
+        elif is_lamp_on:
             plant.lamp.lamp_off()
+
+    sensors_status['lamp'] = plant.check_lamp()
+    update_sensors_state(sensors_status)
 
 
 # Finished
 def activate_doors():
     plant.doors.doors()
+    sensors_status = convert_to_dict(db.get_last_sensors_log())
+    sensors_status['doors'] = plant.check_doors()
+    update_sensors_state(sensors_status)
+
+
+# Finished
+def convert_to_dict(arg_array):
+    sensors_status = {
+        'light': arg_array[1],
+        'heat': arg_array[2],
+        'moist': arg_array[3],
+        'water_lvl': arg_array[4],
+        'doors': arg_array[5],
+        'lamp': arg_array[6]
+    }
+
+    return sensors_status
 
 
 # Finished
@@ -395,6 +432,7 @@ def doors_based_on_weather(sensors_status):
     current_heat = sensors_status['heat']
     rain_status = sensors_status['rain']
     doors_status = sensors_status['doors']
+    change_state = False
 
     if rain_status and not doors_status:
         print('Rainy outside and it seems that the doors are closed, doing nothing')
@@ -420,6 +458,9 @@ def doors_based_on_weather(sensors_status):
         new_door_state = check_better_state(current_heat, profile_min_heat, doors_status, 'cold')
         if new_door_state != doors_status:
             plant.doors.doors()
+
+    sensors_status['doors'] = plant.check_doors()
+    update_sensors_state(sensors_status)
 
 
 # TODO: in progress

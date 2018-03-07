@@ -63,7 +63,6 @@ class IPlantSys:
             'lamp': self.check_lamp()
         }
 
-        print(arr_sensors)
         return arr_sensors
 
     # Finished

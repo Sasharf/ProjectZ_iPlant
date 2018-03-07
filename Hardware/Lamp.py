@@ -18,9 +18,9 @@ class Lamp:
     def lamp_off(self):
         print('Turning lamp off...')
         self.is_on = False
-        GPIO.output(self.pin_num, GPIO.LOW)
+        GPIO.output(self.pin_num, GPIO.HIGH)
 
     def lamp_on(self):
         print('Turning lamp on...')
         self.is_on = True
-        GPIO.output(self.pin_num, GPIO.HIGH)
+        GPIO.output(self.pin_num, GPIO.LOW)
