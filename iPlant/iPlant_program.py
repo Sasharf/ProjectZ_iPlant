@@ -143,7 +143,6 @@ def do_sensor_check():
 def update_sensors_state(sensors_state):
     save_sensors_log(sensors_state)
     sensors_state['mac'] = plant.mac
-    print(sensors_state)
     send_sensors_log(sensors_state)
 
 
