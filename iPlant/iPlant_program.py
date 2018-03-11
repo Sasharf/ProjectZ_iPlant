@@ -7,7 +7,7 @@ import sys
 import math
 import datetime
 
-url = 'http://localhost:3000/'
+url = 'http://192.168.137.1:3000/'
 plant = {}
 db = {}
 heat_sample = None
@@ -241,12 +241,15 @@ def check_if_grow_lamp_req(sensors_status):
     if 19 < cur_time.hour < 7 and is_lamp_on:
         plant.lamp.lamp_off()
     else:
-        if plant.profile.light == 'Full sun' and cur_light < 90 and not is_lamp_on:
-            plant.lamp.lamp_on()
-        elif plant.profile.light == 'Partial sun' and cur_light < 75 and not is_lamp_on:
-            plant.lamp.lamp_on()
-        elif plant.profile.light == 'Shady' and cur_light < 50 and not is_lamp_on:
-            plant.lamp.lamp_on()
+        if plant.profile.light == 'Full sun' and cur_light < 90:
+            if not is_lamp_on:
+                plant.lamp.lamp_on()
+        elif plant.profile.light == 'Partial sun' and cur_light < 75:
+            if not is_lamp_on:
+                plant.lamp.lamp_on()
+        elif plant.profile.light == 'Shady' and cur_light < 50:
+            if not is_lamp_on:
+                plant.lamp.lamp_on()
         elif is_lamp_on:
             plant.lamp.lamp_off()
 
@@ -403,7 +406,7 @@ def time_between_watering():
     if water_session is None:
         return 999999
 
-    last_time = water_session[0]
+    last_time = float(water_session[0])
     diff = cur_time - last_time
 
     return diff
